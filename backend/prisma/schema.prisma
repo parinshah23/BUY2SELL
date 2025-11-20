@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  isAdmin   Boolean  @default(false)
+  avatar    String?  // URL to avatar image
+  bio       String?  // User biography
+
+  // Relationships
+  products     Product[]
+  orders       Order[]
+  chatsAsBuyer Chat[]    @relation("BuyerChats")
+  chatsAsSeller Chat[]   @relation("SellerChats")
+  messages     Message[]
+  reviews      Review[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  price       Float
+  category    String
+  images      String[] // Changed from single image to array
+  location    String?  // New: City, State
+  latitude    Float?   // New: For map
+  longitude   Float?   // New: For map
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  status      ProductStatus @default(AVAILABLE)
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  // Relationship with Order
+  order Order?
+  chats Chat[]
+  reviews Review[]
+}
+
+model Order {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id])
+  productId Int      @unique // A product can only be in one order
+
+  buyer     User     @relation(fields: [buyerId], references: [id])
+  buyerId   Int
+}
+
+model Chat {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int
+
+  buyer     User @relation("BuyerChats", fields: [buyerId], references: [id])
+  buyerId   Int
+
+  seller    User @relation("SellerChats", fields: [sellerId], references: [id])
+  sellerId  Int
+
+  messages  Message[]
+
+  @@unique([productId, buyerId, sellerId]) // One chat per product between specific buyer/seller
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  read      Boolean  @default(false)
+
+  chat   Chat @relation(fields: [chatId], references: [id])
+  chatId Int
+
+  sender   User @relation(fields: [senderId], references: [id])
+  senderId Int
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int      // 1-5 stars
+  comment   String?
+  createdAt DateTime @default(now())
+
+  product   Product @relation(fields: [productId], references: [id])
+  productId Int
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  @@unique([productId, userId]) // One review per product per user
+}
+
+enum ProductStatus {
+  AVAILABLE
+  SOLD
+}
