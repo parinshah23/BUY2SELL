@@ -1,0 +1,58 @@
+/* frontend/src/styles/NewAdminLayout.css */
+
+.admin-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f9fafb;
+}
+
+.admin-sidebar {
+  width: 16rem;
+  background-color: #111827;
+  color: white;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-sidebar-header {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+}
+
+.admin-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+}
+
+.admin-sidebar-link:hover {
+  background-color: #1f2937;
+}
+
+.admin-sidebar-link-active {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 600;
+}
+
+.admin-main {
+  flex: 1;
+  padding: 2rem;
+}
+
+.admin-main-header {
+  font-size: 1.875rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}

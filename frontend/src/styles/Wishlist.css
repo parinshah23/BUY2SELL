@@ -1,0 +1,62 @@
+/* frontend/src/styles/Wishlist.css */
+
+.wishlist-container {
+  padding: 2rem 1.5rem;
+}
+
+.wishlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.wishlist-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+}
+
+.clear-wishlist-button {
+  background-color: #ef4444;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.clear-wishlist-button:hover {
+  background-color: #dc2626;
+}
+
+.wishlist-empty {
+  text-align: center;
+  margin-top: 5rem;
+}
+
+.wishlist-empty-icon {
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+
+.wishlist-empty-text {
+  font-size: 1.25rem;
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+}
+
+.browse-products-button {
+  background-color: #3b82f6;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.browse-products-button:hover {
+  background-color: #2563eb;
+}
