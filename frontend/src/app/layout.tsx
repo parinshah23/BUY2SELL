@@ -6,6 +6,7 @@ import "@/styles/theme.css";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PageWrapper from "@/components/PageWrapper";
 import { WishlistProvider } from "@/context/WishlistContext";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -24,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <WishlistProvider>
             <div className="flex flex-col min-h-screen">
               <Navbar />
-              <main className="flex-grow">{children}</main>
+              <PageWrapper>{children}</PageWrapper>
               <Footer />
             </div>
           </WishlistProvider>
