@@ -29,11 +29,11 @@ export default function Hero() {
                     words={[
                       {
                         text: "Digital",
-                        className: "text-primary-600 dark:text-primary-600",
+                        className: "text-primary-600",
                       },
                       {
                         text: "Assets",
-                        className: "text-accent-500 dark:text-accent-500",
+                        className: "text-accent-500",
                       },
                     ]}
                     className="text-4xl md:text-6xl font-extrabold"

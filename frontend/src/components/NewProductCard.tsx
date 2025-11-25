@@ -31,7 +31,7 @@ export default function NewProductCard({
 
   return (
     <CardContainer className="inter-var w-full" containerClassName="py-0 w-full">
-      <CardBody className="bg-white relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-full h-auto rounded-xl p-4 border shadow-sm hover:shadow-md transition-all">
+      <CardBody className="bg-white relative group/card border-black/[0.1] w-full h-auto rounded-xl p-4 border shadow-sm hover:shadow-md transition-all">
 
         {/* Wishlist Button - Floating */}
         {user && (
@@ -88,7 +88,7 @@ export default function NewProductCard({
         <div className="mt-4 flex flex-col gap-2">
           <CardItem
             translateZ="60"
-            className="text-xl font-bold text-neutral-600 dark:text-white truncate w-full"
+            className="text-xl font-bold text-neutral-600 truncate w-full"
           >
             {product.title}
           </CardItem>
@@ -96,7 +96,7 @@ export default function NewProductCard({
           <CardItem
             as="p"
             translateZ="50"
-            className="text-neutral-500 text-sm max-w-sm mt-1 dark:text-neutral-300 line-clamp-2 h-10"
+            className="text-neutral-500 text-sm max-w-sm mt-1 line-clamp-2 h-10"
           >
             {product.description}
           </CardItem>
@@ -141,7 +141,7 @@ export default function NewProductCard({
                 translateZ={60}
                 as="button"
                 onClick={onView}
-                className="px-4 py-2 rounded-lg bg-primary-600 dark:bg-white dark:text-black text-white text-xs font-bold hover:bg-primary-700 transition-colors flex items-center gap-2 w-full justify-center shadow-md shadow-primary-500/20 cursor-pointer pointer-events-auto"
+                className="px-4 py-2 rounded-lg bg-primary-600 text-white text-xs font-bold hover:bg-primary-700 transition-colors flex items-center gap-2 w-full justify-center shadow-md shadow-primary-500/20 cursor-pointer pointer-events-auto"
               >
                 <Eye size={14} /> View Details
               </CardItem>
