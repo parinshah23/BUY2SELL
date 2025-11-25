@@ -53,9 +53,31 @@ export default function ChatPage() {
         return () => clearInterval(interval);
     }, [currentChatId]);
 
-    // ✅ Scroll to bottom
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const isFirstLoad = useRef(true);
+
+    // Reset first load flag when chat changes
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        isFirstLoad.current = true;
+    }, [currentChatId]);
+
+    // ✅ Smart Scroll to bottom
+    useEffect(() => {
+        if (messages.length === 0) return;
+
+        const container = scrollRef.current;
+
+        if (isFirstLoad.current) {
+            // Initial load: Scroll to bottom immediately
+            messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+            isFirstLoad.current = false;
+        } else if (container) {
+            // Subsequent updates (polling/sending): Only scroll if user is near bottom
+            const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+            if (isNearBottom) {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            }
+        }
     }, [messages]);
 
     // ✅ Send Message
@@ -169,15 +191,15 @@ export default function ChatPage() {
                                 </div>
 
                                 {/* Messages */}
-                                <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-secondary-50/50">
+                                <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-secondary-50/50">
                                     {messages.map((msg) => {
                                         const isMe = msg.senderId === user?.id;
                                         return (
                                             <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
                                                 <div
                                                     className={`max-w-[75%] p-4 rounded-2xl shadow-sm ${isMe
-                                                            ? "bg-primary-600 text-white rounded-tr-none"
-                                                            : "bg-white text-secondary-800 border border-secondary-100 rounded-tl-none"
+                                                        ? "bg-primary-600 text-white rounded-tr-none"
+                                                        : "bg-white text-secondary-800 border border-secondary-100 rounded-tl-none"
                                                         }`}
                                                 >
                                                     <p className="text-sm">{msg.content}</p>

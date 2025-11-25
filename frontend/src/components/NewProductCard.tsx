@@ -2,12 +2,12 @@
 
 import Image from "next/image";
 import { Heart, Pencil, Trash2, Eye } from "lucide-react";
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/context/WishlistContext";
 import "@/styles/NewProductCard.css";
 import { getImageUrl } from "@/lib/utils";
+import { CardBody, CardContainer, CardItem } from "@/components/ui/3d-card";
 
 interface ProductCardProps {
   product: any;
@@ -30,87 +30,125 @@ export default function NewProductCard({
   const isInWishlist = wishlist.some((item) => item.id === product.id);
 
   return (
-    <motion.div
-      whileHover={{ y: -5 }}
-      className="product-card"
-    >
-      {user && (
-        <button
-          onClick={() => toggleWishlist(product)}
-          className="product-card-wishlist-button"
-          aria-label="Add to wishlist"
-        >
-          <Heart
-            size={20}
-            className={`transition ${isInWishlist ? "fill-red-500 text-red-500" : "text-gray-400"
-              }`}
-          />
-        </button>
-      )}
+    <CardContainer className="inter-var w-full" containerClassName="py-0 w-full">
+      <CardBody className="bg-white relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-full h-auto rounded-xl p-4 border shadow-sm hover:shadow-md transition-all">
 
-      <div className="product-card-image" onClick={onView}>
-        {product.images && product.images.length > 0 ? (
-          <Image
-            src={getImageUrl(product.images[0])}
-            alt={product.title}
-            fill
-            className="image"
-          />
-        ) : product.image ? (
-          <Image
-            src={getImageUrl(product.image)}
-            alt={product.title}
-            fill
-            className="image"
-          />
-        ) : (
-          <div className="bg-gray-200 flex items-center justify-center h-full text-gray-400">
-            No Image
-          </div>
-        )}
-      </div>
-
-      <div className="product-card-details">
-        <h3 className="product-card-title">
-          {product.title}
-        </h3>
-        <p className="product-card-description">
-          {product.description}
-        </p>
-
-        <div className="product-card-footer">
-          <span className="product-card-price">€{product.price}</span>
-          <span className="product-card-category">
-            {product.category || "General"}
-          </span>
-        </div>
-
-        <div className="product-card-actions">
-          {showOwnerControls ? (
-            <>
-              <button
-                onClick={onEdit}
-                className="product-card-button product-card-button-edit"
-              >
-                <Pencil size={14} /> Edit
-              </button>
-              <button
-                onClick={onDelete}
-                className="product-card-button product-card-button-delete"
-              >
-                <Trash2 size={14} /> Delete
-              </button>
-            </>
-          ) : (
+        {/* Wishlist Button - Floating */}
+        {user && (
+          <CardItem
+            translateZ="100"
+            className="absolute top-4 right-4 z-20"
+          >
             <button
-              onClick={onView}
-              className="product-card-button product-card-button-view"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleWishlist(product);
+              }}
+              className="p-2 bg-white/80 backdrop-blur-sm rounded-full shadow-sm hover:bg-white transition-colors cursor-pointer pointer-events-auto"
+              aria-label="Add to wishlist"
             >
-              <Eye size={14} /> View Details
+              <Heart
+                size={20}
+                className={`transition ${isInWishlist ? "fill-red-500 text-red-500" : "text-gray-400"}`}
+              />
             </button>
-          )}
+          </CardItem>
+        )}
+
+        <CardItem
+          translateZ="50"
+          className="w-full mt-2"
+        >
+          <div
+            className="relative w-full h-48 rounded-xl overflow-hidden cursor-pointer group-hover/card:shadow-xl"
+            onClick={onView}
+          >
+            {product.images && product.images.length > 0 ? (
+              <Image
+                src={getImageUrl(product.images[0])}
+                alt={product.title}
+                fill
+                className="object-cover group-hover/card:scale-110 transition-transform duration-500"
+              />
+            ) : product.image ? (
+              <Image
+                src={getImageUrl(product.image)}
+                alt={product.title}
+                fill
+                className="object-cover group-hover/card:scale-110 transition-transform duration-500"
+              />
+            ) : (
+              <div className="bg-gray-200 flex items-center justify-center h-full text-gray-400">
+                No Image
+              </div>
+            )}
+          </div>
+        </CardItem>
+
+        <div className="mt-4 flex flex-col gap-2">
+          <CardItem
+            translateZ="60"
+            className="text-xl font-bold text-neutral-600 dark:text-white truncate w-full"
+          >
+            {product.title}
+          </CardItem>
+
+          <CardItem
+            as="p"
+            translateZ="50"
+            className="text-neutral-500 text-sm max-w-sm mt-1 dark:text-neutral-300 line-clamp-2 h-10"
+          >
+            {product.description}
+          </CardItem>
+
+          <div className="flex justify-between items-center mt-4">
+            <CardItem
+              translateZ="40"
+              className="px-3 py-1 rounded-full bg-primary-50 text-primary-700 text-xs font-semibold"
+            >
+              {product.category || "General"}
+            </CardItem>
+            <CardItem
+              translateZ="40"
+              className="text-lg font-bold text-secondary-900"
+            >
+              €{product.price}
+            </CardItem>
+          </div>
+
+          <div className="flex justify-between items-center mt-4 gap-2">
+            {showOwnerControls ? (
+              <>
+                <CardItem
+                  translateZ={60}
+                  as="button"
+                  onClick={onEdit}
+                  className="px-4 py-2 rounded-lg text-xs font-bold bg-secondary-100 text-secondary-900 hover:bg-secondary-200 transition-colors flex items-center gap-1 flex-1 justify-center cursor-pointer pointer-events-auto"
+                >
+                  <Pencil size={14} /> Edit
+                </CardItem>
+                <CardItem
+                  translateZ={60}
+                  as="button"
+                  onClick={onDelete}
+                  className="px-4 py-2 rounded-lg text-xs font-bold bg-red-50 text-red-600 hover:bg-red-100 transition-colors flex items-center gap-1 flex-1 justify-center cursor-pointer pointer-events-auto"
+                >
+                  <Trash2 size={14} /> Delete
+                </CardItem>
+              </>
+            ) : (
+              <CardItem
+                translateZ={60}
+                as="button"
+                onClick={onView}
+                className="px-4 py-2 rounded-lg bg-primary-600 dark:bg-white dark:text-black text-white text-xs font-bold hover:bg-primary-700 transition-colors flex items-center gap-2 w-full justify-center shadow-md shadow-primary-500/20 cursor-pointer pointer-events-auto"
+              >
+                <Eye size={14} /> View Details
+              </CardItem>
+            )}
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </CardBody>
+    </CardContainer>
   );
 }

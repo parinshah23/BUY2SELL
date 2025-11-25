@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import NewProductCard from "@/components/NewProductCard";
 import { motion } from "framer-motion";
-import { Filter, SlidersHorizontal } from "lucide-react";
 import Loader from "@/components/Loader";
 
 export default function ProductsPage() {
@@ -75,17 +74,7 @@ export default function ProductsPage() {
                     </div>
                 </div>
 
-                {/* Filters Bar (Visual only for now, could be interactive later) */}
-                <div className="flex items-center gap-4 mb-8 overflow-x-auto pb-2">
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-secondary-200 rounded-full text-sm font-medium text-secondary-700 hover:bg-secondary-50 whitespace-nowrap">
-                        <Filter size={16} />
-                        All Categories
-                    </button>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-white border border-secondary-200 rounded-full text-sm font-medium text-secondary-700 hover:bg-secondary-50 whitespace-nowrap">
-                        <SlidersHorizontal size={16} />
-                        Price Range
-                    </button>
-                </div>
+
 
                 {loading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">

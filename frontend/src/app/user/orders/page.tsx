@@ -6,6 +6,7 @@ import { Package, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { getImageUrl } from "@/lib/utils";
+import { SubSelectToggle } from "@/components/ui/sub-select-toggle";
 
 interface Order {
     id: number;
@@ -91,31 +92,15 @@ export default function OrdersPage() {
                 <h1 className="text-3xl font-bold text-secondary-900 mb-8">Order History</h1>
 
                 {/* Tabs */}
-                <div className="flex gap-4 mb-8 border-b border-secondary-200">
-                    <button
-                        onClick={() => setActiveTab("purchases")}
-                        className={`pb-4 px-2 font-semibold transition-colors relative ${activeTab === "purchases"
-                            ? "text-primary-600"
-                            : "text-secondary-500 hover:text-secondary-700"
-                            }`}
-                    >
-                        My Purchases
-                        {activeTab === "purchases" && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />
-                        )}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("sales")}
-                        className={`pb-4 px-2 font-semibold transition-colors relative ${activeTab === "sales"
-                            ? "text-primary-600"
-                            : "text-secondary-500 hover:text-secondary-700"
-                            }`}
-                    >
-                        My Sales
-                        {activeTab === "sales" && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />
-                        )}
-                    </button>
+                <div className="flex justify-center mb-8">
+                    <SubSelectToggle
+                        options={[
+                            { label: "My Purchases", value: "purchases" },
+                            { label: "My Sales", value: "sales" },
+                        ]}
+                        selected={activeTab}
+                        onChange={(val) => setActiveTab(val)}
+                    />
                 </div>
 
                 {/* Content */}

@@ -1,3 +1,10 @@
+import { ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
+
 export const getImageUrl = (path: string | undefined | null) => {
     if (!path) return "/placeholder.png";
     if (path.startsWith("http")) return path;
