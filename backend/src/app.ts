@@ -13,6 +13,7 @@ import userRouter from "./routes/user";
 import adminRouter from "./routes/admin";
 import reviewRouter from "./routes/reviews";
 import orderRouter from "./routes/orders";
+import statsRouter from "./routes/stats";
 
 dotenv.config();
 
@@ -35,5 +36,6 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1", reviewRouter);
 app.use("/api/v1", orderRouter);
+app.use("/api/v1/stats", statsRouter);
 
 export default app;

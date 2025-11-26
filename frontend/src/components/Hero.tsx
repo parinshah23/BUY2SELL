@@ -8,8 +8,33 @@ import { AuroraBackground } from "@/components/ui/aurora-background";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import { useAuth } from "@/hooks/useAuth";
 
+import axios from "@/lib/axios";
+import { useEffect, useState } from "react";
+
 export default function Hero() {
   const { user } = useAuth();
+  const [stats, setStats] = useState({
+    inventoryValue: 0,
+    totalProducts: 0,
+    users: 0,
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get("/stats");
+        setStats({
+          inventoryValue: res.data.totalInventoryValue,
+          totalProducts: res.data.totalProducts,
+          users: res.data.totalUsers,
+        });
+      } catch (error) {
+        console.error("Failed to fetch stats:", error);
+      }
+    };
+    fetchStats();
+  }, []);
+
   return (
     <AuroraBackground>
       <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-28 w-full">
@@ -82,61 +107,109 @@ export default function Hero() {
             </div>
 
             {/* Hero Image / Visual */}
-            <div className="flex-1 w-full max-w-lg lg:max-w-none">
+            <div className="flex-1 w-full max-w-lg lg:max-w-none perspective-1000">
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="relative"
+                initial={{ opacity: 0, rotateX: 20, rotateY: -20, scale: 0.9 }}
+                animate={{ opacity: 1, rotateX: 5, rotateY: -10, scale: 1 }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                style={{ transformStyle: "preserve-3d" }}
+                className="relative z-10"
               >
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-secondary-100 bg-white p-4">
-                  {/* Placeholder for Hero Image - using a gradient block for now if no image */}
-                  <div className="aspect-[4/3] rounded-xl bg-gradient-to-br from-secondary-100 to-secondary-50 flex items-center justify-center overflow-hidden">
-                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1556742049-0cfed4f7a07d?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-90 hover:scale-105 transition-transform duration-700" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                {/* Browser Window Frame */}
+                <div className="relative rounded-xl bg-white/80 backdrop-blur-xl border border-white/20 shadow-2xl overflow-hidden">
+                  {/* Browser Header */}
+                  <div className="h-8 bg-gray-50/50 border-b border-gray-100 flex items-center px-4 gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-400/80" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
+                    <div className="w-3 h-3 rounded-full bg-green-400/80" />
                   </div>
 
-                  {/* Floating Card 1 */}
-                  <motion.div
-                    animate={{ y: [0, -10, 0] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute -bottom-6 -left-6 bg-white p-4 rounded-xl shadow-lg border border-secondary-100 flex items-center gap-3"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                      <span className="font-bold text-lg">€</span>
+                  {/* Dashboard Content Mockup */}
+                  <div className="p-6 grid grid-cols-12 gap-6 bg-gradient-to-br from-gray-50 to-white h-[400px]">
+                    {/* Sidebar */}
+                    <div className="col-span-3 space-y-3">
+                      <div className="h-8 w-full bg-gray-200/50 rounded-lg animate-pulse" />
+                      <div className="h-4 w-3/4 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-4 w-1/2 bg-gray-100 rounded animate-pulse" />
+                      <div className="h-4 w-2/3 bg-gray-100 rounded animate-pulse" />
+                      <div className="mt-8 h-32 w-full bg-blue-50/50 rounded-xl border border-blue-100" />
                     </div>
-                    <div>
-                      <p className="text-xs text-secondary-500">Total Sales</p>
-                      <p className="text-lg font-bold text-secondary-900">€1.2M+</p>
-                    </div>
-                  </motion.div>
 
-                  {/* Floating Card 2 */}
-                  <motion.div
-                    animate={{ y: [0, 10, 0] }}
-                    transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                    className="absolute -top-6 -right-6 bg-white p-4 rounded-xl shadow-lg border border-secondary-100 flex items-center gap-3"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                      <UserIcon />
+                    {/* Main Content */}
+                    <div className="col-span-9 space-y-6">
+                      {/* Header Stats */}
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="h-24 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                          <div className="h-8 w-8 bg-indigo-100 rounded-full mb-2" />
+                          <div className="h-4 w-16 bg-gray-100 rounded" />
+                        </div>
+                        <div className="h-24 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                          <div className="h-8 w-8 bg-purple-100 rounded-full mb-2" />
+                          <div className="h-4 w-16 bg-gray-100 rounded" />
+                        </div>
+                        <div className="h-24 bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                          <div className="h-8 w-8 bg-pink-100 rounded-full mb-2" />
+                          <div className="h-4 w-16 bg-gray-100 rounded" />
+                        </div>
+                      </div>
+
+                      {/* Chart Area */}
+                      <div className="h-48 bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-end gap-2">
+                        {[40, 70, 45, 90, 60, 80, 50, 75, 60, 95].map((h, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ height: 0 }}
+                            animate={{ height: `${h}%` }}
+                            transition={{ duration: 1, delay: 0.5 + i * 0.1 }}
+                            className="flex-1 bg-gradient-to-t from-primary-500 to-primary-300 rounded-t-sm opacity-80 hover:opacity-100 transition-opacity"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Floating Elements */}
+                <motion.div
+                  animate={{ y: [0, -15, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -right-8 top-20 bg-white p-4 rounded-2xl shadow-xl border border-gray-100 z-20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold">
+                      $
                     </div>
                     <div>
-                      <p className="text-xs text-secondary-500">Active Users</p>
-                      <p className="text-lg font-bold text-secondary-900">50k+</p>
+                      <p className="text-xs text-gray-500">Inventory Value</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        {new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(stats.inventoryValue)}
+                      </p>
                     </div>
-                  </motion.div>
-                </div>
+                  </div>
+                </motion.div>
+
+                <motion.div
+                  animate={{ y: [0, 15, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  className="absolute -left-8 bottom-20 bg-white p-4 rounded-2xl shadow-xl border border-gray-100 z-20"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                      <ShoppingBag size={18} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Total Products</p>
+                      <p className="text-lg font-bold text-gray-900">{stats.totalProducts}</p>
+                    </div>
+                  </div>
+                </motion.div>
               </motion.div>
             </div>
           </div>
         </div>
       </section>
-    </AuroraBackground>
+    </AuroraBackground >
   );
 }
 
-function UserIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-  )
-}
+
