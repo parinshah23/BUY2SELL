@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import axios from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import { Camera, Save, User } from "lucide-react";
+import { Camera, Save, User, Trash2 } from "lucide-react";
 import Image from "next/image";
 import { getImageUrl } from "@/lib/utils";
 import { toast } from "sonner";
@@ -91,6 +91,7 @@ export default function ProfilePage() {
                         <h1 className="text-3xl font-bold text-secondary-900 mb-8">Edit Profile</h1>
 
                         {/* Avatar Section */}
+                        {/* Avatar Section */}
                         <div className="flex flex-col items-center mb-8">
                             <div className="relative w-32 h-32 mb-4">
                                 <div className="w-full h-full rounded-full overflow-hidden border-4 border-white shadow-lg bg-secondary-100 flex items-center justify-center">
@@ -106,8 +107,12 @@ export default function ProfilePage() {
                                         <User size={48} className="text-secondary-400" />
                                     )}
                                 </div>
-                                <label className="absolute bottom-0 right-0 bg-primary-600 text-white p-2 rounded-full cursor-pointer hover:bg-primary-700 transition-colors shadow-md">
-                                    <Camera size={18} />
+                            </div>
+
+                            <div className="flex gap-3">
+                                <label className="cursor-pointer px-4 py-2 bg-secondary-100 text-secondary-700 rounded-lg text-sm font-medium hover:bg-secondary-200 transition-colors flex items-center gap-2">
+                                    <Camera size={16} />
+                                    Change Photo
                                     <input
                                         type="file"
                                         accept="image/*"
@@ -116,8 +121,17 @@ export default function ProfilePage() {
                                         disabled={uploading}
                                     />
                                 </label>
+                                {avatar && (
+                                    <button
+                                        onClick={() => setAvatar("")}
+                                        className="px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors flex items-center gap-2"
+                                    >
+                                        <Trash2 size={16} />
+                                        Remove
+                                    </button>
+                                )}
                             </div>
-                            {uploading && <p className="text-sm text-primary-600">Uploading...</p>}
+                            {uploading && <p className="text-sm text-primary-600 mt-2">Uploading...</p>}
                         </div>
 
                         {/* Form Fields */}
