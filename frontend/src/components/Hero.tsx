@@ -6,8 +6,10 @@ import { ArrowRight, ShoppingBag } from "lucide-react";
 
 import { AuroraBackground } from "@/components/ui/aurora-background";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Hero() {
+  const { user } = useAuth();
   return (
     <AuroraBackground>
       <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-28 w-full">
@@ -54,7 +56,7 @@ export default function Hero() {
                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </Link>
                   <Link
-                    href="/user/add-product"
+                    href={user ? "/user/add-product" : "/user/login"}
                     className="w-full sm:w-auto px-8 py-4 bg-white text-secondary-900 border border-secondary-200 rounded-full font-semibold hover:bg-secondary-50 transition-all flex items-center justify-center gap-2"
                   >
                     <ShoppingBag size={18} />

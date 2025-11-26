@@ -13,7 +13,13 @@ export default function AddProductPage() {
   const searchParams = useSearchParams();
   const productId = searchParams.get("id");
 
-  const token = useAuth();
+  const { user, loading: authLoading } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/user/login");
+    }
+  }, [user, authLoading, router]);
 
   const [form, setForm] = useState({
     title: "",
@@ -72,6 +78,8 @@ export default function AddProductPage() {
       formData.append("images", file);
     });
 
+    const token = localStorage.getItem("token");
+
     try {
       setUploading(true);
       const res = await axios.post("/upload/multiple", formData, {
@@ -111,6 +119,8 @@ export default function AddProductPage() {
         ...form,
         price: Number(form.price),
       };
+
+      const token = localStorage.getItem("token");
 
       if (isEditing) {
         // Update product
