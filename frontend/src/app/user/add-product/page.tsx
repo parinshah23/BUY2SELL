@@ -7,6 +7,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { Save, ArrowLeft, Upload, Loader2, X, MapPin } from "lucide-react";
 import { getImageUrl } from "@/lib/utils";
+import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
+
+const CATEGORIES = [
+  "Electronics",
+  "Fashion",
+  "Home",
+  "Books",
+  "Sports",
+  "Furniture",
+  "Vehicles",
+  "Other",
+];
 
 export default function AddProductPage() {
   const router = useRouter();
@@ -55,7 +68,7 @@ export default function AddProductPage() {
         setIsEditing(true);
       } catch (error) {
         console.error("Error fetching product:", error);
-        alert("Unable to load product data.");
+        toast.error("Unable to load product data.");
       } finally {
         setLoading(false);
       }
@@ -93,9 +106,10 @@ export default function AddProductPage() {
         ...prev,
         images: [...prev.images, ...res.data.imageUrls],
       }));
+      toast.success("Images uploaded successfully");
     } catch (error) {
       console.error("Upload failed:", error);
-      alert("Failed to upload images.");
+      toast.error("Failed to upload images.");
     } finally {
       setUploading(false);
     }
@@ -129,7 +143,7 @@ export default function AddProductPage() {
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        alert("Product updated successfully!");
+        toast.success("Product updated successfully!");
       } else {
         // Create product
         await axios.post(
@@ -137,13 +151,13 @@ export default function AddProductPage() {
           payload,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        alert("Product added successfully!");
+        toast.success("Product added successfully!");
       }
 
       router.push("/user/my-products");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error submitting form:", error);
-      alert("Failed to save product.");
+      toast.error(error.response?.data?.message || "Failed to save product.");
     } finally {
       setLoading(false);
     }
@@ -220,16 +234,24 @@ export default function AddProductPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-secondary-700 mb-2" htmlFor="category">Category</label>
-                <input
-                  type="text"
-                  id="category"
-                  name="category"
-                  value={form.category}
-                  onChange={handleChange}
-                  placeholder="e.g. Furniture"
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-secondary-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
-                />
+                <div className="relative">
+                  <select
+                    id="category"
+                    name="category"
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 rounded-xl border border-secondary-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all appearance-none bg-white"
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-secondary-500">
+                    <ChevronDown size={16} />
+                  </div>
+                </div>
               </div>
             </div>
 

@@ -69,6 +69,7 @@ export default function NewProductCard({
                 alt={product.title}
                 fill
                 className="object-cover group-hover/card:scale-110 transition-transform duration-500"
+                unoptimized
               />
             ) : product.image ? (
               <Image
@@ -76,6 +77,7 @@ export default function NewProductCard({
                 alt={product.title}
                 fill
                 className="object-cover group-hover/card:scale-110 transition-transform duration-500"
+                unoptimized
               />
             ) : (
               <div className="bg-gray-200 flex items-center justify-center h-full text-gray-400">

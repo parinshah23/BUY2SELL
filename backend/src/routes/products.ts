@@ -210,7 +210,7 @@ router.get("/:id", async (req, res) => {
       where: { id: productId },
       include: {
         user: {
-          select: { id: true, name: true, email: true },
+          select: { id: true, name: true, email: true, avatar: true },
         },
       },
     });

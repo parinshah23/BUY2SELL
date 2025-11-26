@@ -8,9 +8,10 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import { Camera, Save, User } from "lucide-react";
 import Image from "next/image";
 import { getImageUrl } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function ProfilePage() {
-    const { user, login } = useAuth(); // login is used to update local user state
+    const { user, login, updateUser } = useAuth(); // login is used to update local user state
     const router = useRouter();
 
     const [name, setName] = useState("");
@@ -32,7 +33,7 @@ export default function ProfilePage() {
         if (!file) return;
 
         const formData = new FormData();
-        formData.append("images", file); // The backend expects "images" field
+        formData.append("image", file); // The backend expects "image" field
 
         try {
             setUploading(true);
@@ -46,10 +47,11 @@ export default function ProfilePage() {
 
             if (res.data.imageUrl) {
                 setAvatar(res.data.imageUrl);
+                toast.success("Profile picture uploaded!");
             }
         } catch (error) {
             console.error("Error uploading image:", error);
-            alert("Failed to upload image");
+            toast.error("Failed to upload image");
         } finally {
             setUploading(false);
         }
@@ -67,14 +69,15 @@ export default function ProfilePage() {
 
             // Update local user state (if useAuth supports it, otherwise reload or re-fetch)
             // Assuming login() can be used to set user data or we just rely on re-fetch
-            alert("Profile updated successfully!");
+            updateUser(res.data.user);
+            toast.success("Profile updated successfully!");
 
-            // Ideally, useAuth should expose a way to update user, or we force a reload
-            window.location.reload();
+            // Update the auth context with new data if possible, or just let the local state show it
+            // window.location.reload(); // Removed to prevent toast from disappearing
 
         } catch (error) {
             console.error("Error updating profile:", error);
-            alert("Failed to update profile");
+            toast.error("Failed to update profile");
         } finally {
             setLoading(false);
         }
@@ -97,6 +100,7 @@ export default function ProfilePage() {
                                             alt="Profile"
                                             fill
                                             className="object-cover"
+                                            unoptimized
                                         />
                                     ) : (
                                         <User size={48} className="text-secondary-400" />

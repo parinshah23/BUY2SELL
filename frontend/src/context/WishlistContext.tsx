@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { toast } from "sonner";
 
 interface WishlistContextType {
   wishlist: any[];
@@ -29,8 +30,10 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     setWishlist((prev) => {
       const exists = prev.some((item) => item.id === product.id);
       if (exists) {
+        toast.info("Removed from wishlist");
         return prev.filter((item) => item.id !== product.id);
       } else {
+        toast.success("Added to wishlist");
         return [...prev, product];
       }
     });

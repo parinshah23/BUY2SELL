@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { User, Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -34,11 +35,14 @@ export default function RegisterPage() {
         // Auto-login after registration
         const loginRes = await axios.post("/auth/login", { email, password });
         login(loginRes.data.user, loginRes.data.token);
+        toast.success("Account created successfully!");
         router.push("/user/my-products");
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || "Registration failed");
+      const msg = err.response?.data?.message || "Registration failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

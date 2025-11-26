@@ -7,6 +7,8 @@ import SearchBar from "@/components/SearchBar";
 import NewProductCard from "@/components/NewProductCard";
 import { motion } from "framer-motion";
 import Loader from "@/components/Loader";
+import { useAuth } from "@/hooks/useAuth";
+import { Plus } from "lucide-react";
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<any[]>([]);
@@ -24,6 +26,7 @@ export default function ProductsPage() {
     const [total, setTotal] = useState(0);
 
     const router = useRouter();
+    const { user } = useAuth();
 
     // ✅ Fetch products with server-side filtering
     const fetchProducts = async () => {
@@ -67,6 +70,15 @@ export default function ProductsPage() {
                     <div>
                         <h1 className="text-3xl font-bold text-secondary-900">Browse Collection</h1>
                         <p className="text-secondary-500 mt-2">Find exactly what you're looking for</p>
+                        {user && (
+                            <button
+                                onClick={() => router.push("/user/add-product")}
+                                className="mt-4 inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-700 transition-colors shadow-sm"
+                            >
+                                <Plus size={18} />
+                                Add Product
+                            </button>
+                        )}
                     </div>
 
                     <div className="w-full md:w-auto">

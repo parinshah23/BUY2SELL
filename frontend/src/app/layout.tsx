@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageWrapper from "@/components/PageWrapper";
 import { WishlistProvider } from "@/context/WishlistContext";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <PageWrapper>{children}</PageWrapper>
               <Footer />
             </div>
+            <Toaster position="top-center" richColors duration={2000} />
           </WishlistProvider>
         </AuthProvider>
       </body>

@@ -10,6 +10,7 @@ import { ShoppingCart, Heart, Edit, Trash2, ArrowLeft, ShieldCheck, Truck, Rotat
 import { motion } from "framer-motion";
 import { useWishlist } from "@/context/WishlistContext";
 import { getImageUrl } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -62,16 +63,26 @@ export default function ProductDetailPage() {
   }, [id]);
 
   // ✅ Delete product
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-    try {
-      await axios.delete(`/products/${id}`);
-      alert("Product deleted successfully!");
-      router.push("/user/my-products");
-    } catch (error) {
-      console.error("Error deleting product:", error);
-      alert("Failed to delete product.");
-    }
+  const handleDelete = () => {
+    toast("Are you sure you want to delete this product?", {
+      action: {
+        label: "Delete",
+        onClick: async () => {
+          try {
+            await axios.delete(`/products/${id}`);
+            toast.success("Product deleted successfully!");
+            router.push("/user/my-products");
+          } catch (error) {
+            console.error("Error deleting product:", error);
+            toast.error("Failed to delete product.");
+          }
+        },
+      },
+      cancel: {
+        label: "Cancel",
+        onClick: () => { },
+      },
+    });
   };
 
   // Submit review
@@ -86,10 +97,10 @@ export default function ProductDetailPage() {
       setReviews([res.data.review, ...reviews]);
       setRating(5);
       setComment("");
-      alert("Review submitted successfully!");
+      toast.success("Review submitted successfully!");
     } catch (error: any) {
       console.error("Error submitting review:", error);
-      alert(error.response?.data?.message || "Failed to submit review");
+      toast.error(error.response?.data?.message || "Failed to submit review");
     } finally {
       setSubmitting(false);
     }
@@ -109,7 +120,7 @@ export default function ProductDetailPage() {
       router.push(`/user/chat?id=${res.data.chat.id}`);
     } catch (error) {
       console.error("Error starting chat:", error);
-      alert("Failed to start chat.");
+      toast.error("Failed to start chat.");
     }
   };
 
@@ -159,6 +170,7 @@ export default function ProductDetailPage() {
                   alt={product.title}
                   fill
                   className="object-cover"
+                  unoptimized
                 />
               ) : (
                 <div className="flex items-center justify-center h-full text-secondary-300 bg-secondary-100">
@@ -182,6 +194,7 @@ export default function ProductDetailPage() {
                       alt={`Thumbnail ${index + 1}`}
                       fill
                       className="object-cover"
+                      unoptimized
                     />
                   </button>
                 ))}
@@ -287,8 +300,18 @@ export default function ProductDetailPage() {
             {/* Seller Info */}
             {product.user && (
               <div className="bg-white p-6 rounded-2xl border border-secondary-100 flex items-center gap-4">
-                <div className="w-12 h-12 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold text-xl">
-                  {product.user.name.charAt(0).toUpperCase()}
+                <div className="w-12 h-12 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold text-xl overflow-hidden relative">
+                  {product.user.avatar ? (
+                    <Image
+                      src={getImageUrl(product.user.avatar)}
+                      alt={product.user.name}
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    product.user.name.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div>
                   <p className="text-sm text-secondary-500">Sold by</p>

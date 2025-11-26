@@ -7,6 +7,7 @@ import axios from "@/lib/axios";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -28,6 +29,7 @@ export default function LoginPage() {
       const { token, user } = res.data;
 
       login(user, token);
+      toast.success("Welcome back!");
 
       // ✅ Check if a redirect query exists
       const redirectPath = searchParams.get("redirect");
@@ -39,7 +41,9 @@ export default function LoginPage() {
 
     } catch (err: any) {
       console.error("Login failed:", err);
-      setError(err.response?.data?.message || "Login failed. Please try again.");
+      const msg = err.response?.data?.message || "Login failed. Please try again.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

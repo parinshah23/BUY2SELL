@@ -17,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   login: (userData: User, token: string) => void;
   logout: () => void;
+  updateUser: (userData: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,11 +61,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     router.push("/user/login");
   };
 
+  const updateUser = (userData: User) => {
+    localStorage.setItem("user", JSON.stringify(userData));
+    setUser(userData);
+  };
+
   // ✅ Prevent hydration mismatch by rendering only on client
   if (!isClient) return null;
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

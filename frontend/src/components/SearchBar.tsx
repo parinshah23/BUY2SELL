@@ -86,6 +86,7 @@ export default function SearchBar({ onFilterChange }: SearchBarProps) {
           <option value="Sports">Sports</option>
           <option value="Furniture">Furniture</option>
           <option value="Vehicles">Vehicles</option>
+          <option value="Other">Other</option>
         </select>
       </div>
 
