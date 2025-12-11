@@ -16,6 +16,7 @@ model User {
   isAdmin   Boolean  @default(false)
   avatar    String?  // URL to avatar image
   bio       String?  // User biography
+  googleId  String?  @unique // Google OAuth ID
 
   // Relationships
   products     Product[]

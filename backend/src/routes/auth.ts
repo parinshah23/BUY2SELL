@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import dotenv from "dotenv";
 import { verifyToken } from "../middlewares/authMiddleware";
+import { OAuth2Client } from "google-auth-library";
 
 dotenv.config();
 const router = Router();
@@ -106,6 +107,74 @@ router.get("/me", verifyToken, async (req, res) => {
 // LOGOUT (Frontend handled, but route provided for UX)
 router.post("/logout", (req, res) => {
   res.json({ message: "Logged out successfully" });
+});
+
+// GOOGLE LOGIN
+router.post("/google", async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) {
+      return res.status(400).json({ message: "Credential required" });
+    }
+
+    const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+
+    if (!payload || !payload.email) {
+      return res.status(400).json({ message: "Invalid Google token" });
+    }
+
+    const { email, name, sub: googleId, picture } = payload;
+
+    // Check if user exists by googleId or email
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [{ googleId }, { email }],
+      },
+    });
+
+    if (!user) {
+      // Create new user
+      // Note: We need a password for the model constraint, so we generate a random one
+      const dummyPassword = await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
+      user = await prisma.user.create({
+        data: {
+          name: name || "Google User",
+          email,
+          password: dummyPassword,
+          googleId, // Google ID from payload
+          avatar: picture,
+        },
+      });
+    } else if (!user.googleId) {
+      // Link existing user to Google
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { googleId, avatar: user.avatar || picture },
+      });
+    }
+
+    // Generate JWT
+    const jwtSecret: Secret = process.env.JWT_SECRET as Secret;
+    const token = jwt.sign(
+      { id: user.id, email: user.email, isAdmin: user.isAdmin || false },
+      jwtSecret,
+      { expiresIn: process.env.JWT_EXPIRES_IN || "7d" } as SignOptions
+    );
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar },
+    });
+  } catch (error) {
+    console.error("Google Auth Error:", error);
+    res.status(500).json({ message: "Google authentication failed" });
+  }
 });
 
 export default router;

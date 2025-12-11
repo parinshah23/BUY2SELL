@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import PageWrapper from "@/components/PageWrapper";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { Toaster } from "sonner";
+import { GoogleOAuthProvider } from "@react-oauth/google";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const outfit = Outfit({ subsets: ["latin"], variable: "--font-outfit" });
@@ -22,16 +23,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
       <body suppressHydrationWarning={true} className="font-sans bg-secondary-50 text-secondary-900">
-        <AuthProvider>
-          <WishlistProvider>
-            <div className="flex flex-col min-h-screen">
-              <Navbar />
-              <PageWrapper>{children}</PageWrapper>
-              <Footer />
-            </div>
-            <Toaster position="top-center" richColors duration={2000} />
-          </WishlistProvider>
-        </AuthProvider>
+        <GoogleOAuthProvider clientId={process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ""}>
+          <AuthProvider>
+            <WishlistProvider>
+              <div className="flex flex-col min-h-screen">
+                <Navbar />
+                <PageWrapper>{children}</PageWrapper>
+                <Footer />
+              </div>
+              <Toaster position="top-center" richColors duration={2000} />
+            </WishlistProvider>
+          </AuthProvider>
+        </GoogleOAuthProvider>
       </body>
     </html>
   );

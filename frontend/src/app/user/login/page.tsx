@@ -8,6 +8,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import GoogleLoginBtn from "@/components/GoogleLoginBtn";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -151,6 +152,23 @@ export default function LoginPage() {
           </button>
         </form>
 
+
+
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-secondary-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-secondary-500">Or continue with</span>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <GoogleLoginBtn />
+          </div>
+        </div>
+
         <div className="text-center mt-4">
           <p className="text-sm text-secondary-600">
             Don't have an account?{" "}
@@ -160,6 +178,6 @@ export default function LoginPage() {
           </p>
         </div>
       </motion.div>
-    </div>
+    </div >
   );
 }
