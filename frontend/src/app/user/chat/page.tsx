@@ -4,8 +4,9 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "@/lib/axios";
 import { useAuth } from "@/hooks/useAuth";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Send, User, MessageCircle, ArrowLeft } from "lucide-react";
+import { io } from "socket.io-client";
 
 export default function ChatPage() {
     const router = useRouter();
@@ -17,7 +18,89 @@ export default function ChatPage() {
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
+    const [isTyping, setIsTyping] = useState(false); // Am I typing?
+    const [typingUser, setTypingUser] = useState<string | null>(null); // Who is typing?
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const socket = useRef<any>(null);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // ✅ Initialize Socket.io
+    useEffect(() => {
+        // Derive socket URL from API URL (remove /api/v1)
+        const socketUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:5000";
+        socket.current = io(socketUrl);
+
+        socket.current.on("receive_message", (data: any) => {
+            // 1. Update Messages (if in current chat)
+            if (String(data.chatId) === String(currentChatId)) {
+                setMessages((prev) => [...prev, data]);
+                setTypingUser(null);
+                // Mark as read immediately if user is viewing this chat
+                axios.put(`/chats/${currentChatId}/read`);
+            }
+
+            // 2. Update Sidebar (Chats List + Unread Count)
+            setChats((prevChats) => {
+                const existingChatIndex = prevChats.findIndex(c => c.id === Number(data.chatId));
+                if (existingChatIndex === -1) return prevChats;
+
+                const updatedChats = [...prevChats];
+                const isCurrentChat = String(data.chatId) === String(currentChatId);
+
+                const updatedChat = {
+                    ...updatedChats[existingChatIndex],
+                    messages: [data],
+                    unreadCount: isCurrentChat ? 0 : (updatedChats[existingChatIndex].unreadCount || 0) + 1,
+                    updatedAt: new Date().toISOString()
+                };
+
+                updatedChats.splice(existingChatIndex, 1);
+                updatedChats.unshift(updatedChat);
+                return updatedChats;
+            });
+        });
+
+        socket.current.on("typing", (data: any) => {
+            if (String(data.room) === String(currentChatId) && data.userId !== user?.id) {
+                setTypingUser(data.name);
+            }
+        });
+
+        socket.current.on("stop_typing", (data: any) => {
+            if (String(data.room) === String(currentChatId)) {
+                setTypingUser(null);
+            }
+        });
+
+        return () => {
+            socket.current.disconnect();
+        };
+    }, [currentChatId, user?.id]);
+
+    // ✅ Reset Unread Count when entering a chat
+    useEffect(() => {
+        if (currentChatId) {
+            // 1. API Call
+            axios.put(`/chats/${currentChatId}/read`);
+
+            // 2. Local State Update
+            setChats(prev => prev.map(c =>
+                c.id === Number(currentChatId) ? { ...c, unreadCount: 0 } : c
+            ));
+        }
+    }, [currentChatId]);
+
+
+    // ✅ Join Room when Chat ID changes
+    useEffect(() => {
+        if (currentChatId && socket.current) {
+            socket.current.emit("join_room", currentChatId);
+            setTypingUser(null);
+        }
+    }, [currentChatId]);
+
 
     // ✅ Fetch all chats
     useEffect(() => {
@@ -32,9 +115,9 @@ export default function ChatPage() {
             }
         };
         fetchChats();
-    }, []);
+    }, []); // Only fetch once on mount (updates handled by socket/local)
 
-    // ✅ Fetch messages for selected chat
+    // ✅ Fetch messages for selected chat (Initial Load)
     useEffect(() => {
         if (!currentChatId) return;
 
@@ -48,12 +131,8 @@ export default function ChatPage() {
         };
 
         fetchMessages();
-        // Poll for new messages every 3 seconds (simple real-time)
-        const interval = setInterval(fetchMessages, 3000);
-        return () => clearInterval(interval);
     }, [currentChatId]);
 
-    const scrollRef = useRef<HTMLDivElement>(null);
     const isFirstLoad = useRef(true);
 
     // Reset first load flag when chat changes
@@ -63,36 +142,95 @@ export default function ChatPage() {
 
     // ✅ Smart Scroll to bottom
     useEffect(() => {
-        if (messages.length === 0) return;
+        if (messages.length === 0 || !containerRef.current) return;
 
-        const container = scrollRef.current;
+        const container = containerRef.current;
 
         if (isFirstLoad.current) {
-            // Initial load: Scroll to bottom immediately
-            messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+            // Initial load: Jump to bottom
+            container.scrollTop = container.scrollHeight;
             isFirstLoad.current = false;
-        } else if (container) {
-            // Subsequent updates (polling/sending): Only scroll if user is near bottom
+        } else {
+            // Subsequent updates: Smooth scroll only if already near bottom
             const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
             if (isNearBottom) {
-                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                // Use setTimeout to ensure DOM is updated
+                setTimeout(() => {
+                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                }, 100);
             }
         }
-    }, [messages]);
+    }, [messages, typingUser]); // Also scroll when typing indicator appears
+
+    // ✅ Handle Typing
+    const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setNewMessage(e.target.value);
+
+        if (!socket.current || !currentChatId) return;
+
+        if (!isTyping) {
+            setIsTyping(true);
+            socket.current.emit("typing", { room: currentChatId, userId: user?.id, name: user?.name });
+        }
+
+        // Debounce stop typing
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+
+        typingTimeoutRef.current = setTimeout(() => {
+            setIsTyping(false);
+            socket.current.emit("stop_typing", { room: currentChatId });
+        }, 2000);
+    };
+
 
     // ✅ Send Message
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newMessage.trim() || !currentChatId) return;
 
+        // Stop typing immediately
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        setIsTyping(false);
+        socket.current?.emit("stop_typing", { room: currentChatId });
+
         try {
-            await axios.post(`/chats/${currentChatId}/messages`, {
+            // 1. Save to Database via REST API
+            const res = await axios.post(`/chats/${currentChatId}/messages`, {
                 content: newMessage,
             });
+
+            const savedMessage = res.data.data;
+
+            // 2. Add to local state
+            const messageWithSender = {
+                ...savedMessage,
+                sender: { id: user?.id, name: user?.name }
+            };
+            setMessages((prev) => [...prev, messageWithSender]);
             setNewMessage("");
-            // Optimistic update or refetch
-            const res = await axios.get(`/chats/${currentChatId}`);
-            setMessages(res.data.messages);
+
+            // 3. Update Sidebar immediately for sender
+            setChats((prevChats) => {
+                const existingChatIndex = prevChats.findIndex(c => c.id === Number(currentChatId));
+                if (existingChatIndex === -1) return prevChats;
+
+                const updatedChats = [...prevChats];
+                const updatedChat = {
+                    ...updatedChats[existingChatIndex],
+                    messages: [messageWithSender],
+                    updatedAt: new Date().toISOString()
+                };
+                updatedChats.splice(existingChatIndex, 1);
+                updatedChats.unshift(updatedChat);
+                return updatedChats;
+            });
+
+            // 4. Emit to Socket
+            socket.current.emit("send_message", {
+                room: currentChatId,
+                ...messageWithSender
+            });
+
         } catch (error) {
             console.error("Error sending message:", error);
         }
@@ -149,9 +287,16 @@ export default function ChatPage() {
                                                 <p className="text-sm text-secondary-500 truncate font-medium">
                                                     {chat.product.title}
                                                 </p>
-                                                <p className="text-xs text-secondary-400 truncate mt-1">
-                                                    {chat.messages[0]?.content || "No messages yet"}
-                                                </p>
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <p className={`text-xs truncate ${isActive ? "text-primary-700" : "text-secondary-400"}`}>
+                                                        {chat.messages[0]?.content || "No messages yet"}
+                                                    </p>
+                                                    {chat.unreadCount > 0 && (
+                                                        <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg shadow-red-500/30">
+                                                            {chat.unreadCount}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </button>
                                     );
@@ -191,7 +336,7 @@ export default function ChatPage() {
                                 </div>
 
                                 {/* Messages */}
-                                <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-secondary-50/50">
+                                <div ref={containerRef} className="flex-1 overflow-y-auto p-6 space-y-4 bg-secondary-50/50">
                                     {messages.map((msg) => {
                                         const isMe = msg.senderId === user?.id;
                                         return (
@@ -210,6 +355,26 @@ export default function ChatPage() {
                                             </div>
                                         );
                                     })}
+
+                                    {/* Typing Indicator */}
+                                    <AnimatePresence>
+                                        {typingUser && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: 10 }}
+                                                className="flex justify-start"
+                                            >
+                                                <div className="bg-white px-4 py-2 rounded-2xl rounded-tl-none border border-secondary-100 shadow-sm flex items-center gap-1">
+                                                    <span className="text-xs text-secondary-400 mr-2">{typingUser} is typing</span>
+                                                    <div className="w-1.5 h-1.5 bg-secondary-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                                    <div className="w-1.5 h-1.5 bg-secondary-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                                    <div className="w-1.5 h-1.5 bg-secondary-400 rounded-full animate-bounce"></div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
                                     <div ref={messagesEndRef} />
                                 </div>
 
@@ -219,7 +384,7 @@ export default function ChatPage() {
                                         <input
                                             type="text"
                                             value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
+                                            onChange={handleTyping}
                                             placeholder="Type a message..."
                                             className="flex-1 px-4 py-3 rounded-xl border border-secondary-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
                                         />

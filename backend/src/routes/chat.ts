@@ -65,11 +65,27 @@ router.get("/", verifyToken, async (req, res) => {
                     orderBy: { createdAt: "desc" },
                     take: 1, // Get latest message
                 },
+                _count: {
+                    select: {
+                        messages: {
+                            where: {
+                                read: false,
+                                senderId: { not: userId } // Only count messages sent by others
+                            }
+                        }
+                    }
+                }
             },
             orderBy: { updatedAt: "desc" },
         });
 
-        res.json({ chats });
+        // Flatten the structure for easier frontend consumption
+        const formattedChats = chats.map(chat => ({
+            ...chat,
+            unreadCount: chat._count.messages
+        }));
+
+        res.json({ chats: formattedChats });
     } catch (error) {
         console.error("Error fetching chats:", error);
         res.status(500).json({ message: "Internal server error" });
@@ -141,6 +157,28 @@ router.post("/:id/messages", verifyToken, async (req, res) => {
         res.status(201).json({ message: "Message sent", data: message });
     } catch (error) {
         console.error("Error sending message:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+// ✅ Mark Messages as Read
+router.put("/:id/read", verifyToken, async (req, res) => {
+    try {
+        const chatId = Number(req.params.id);
+        const userId = (req as any).user.id;
+
+        await prisma.message.updateMany({
+            where: {
+                chatId,
+                senderId: { not: userId }, // Only mark messages from OTHER user
+                read: false
+            },
+            data: { read: true }
+        });
+
+        res.json({ message: "Messages marked as read" });
+    } catch (error) {
+        console.error("Error marking messages as read:", error);
         res.status(500).json({ message: "Internal server error" });
     }
 });
