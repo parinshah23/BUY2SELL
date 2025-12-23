@@ -6,7 +6,7 @@ import Image from "next/image";
 import axios from "@/lib/axios";
 import { useAuth } from "@/hooks/useAuth";
 import Loader from "@/components/Loader";
-import { ShoppingCart, Heart, Edit, Trash2, ArrowLeft, ShieldCheck, Truck, RotateCcw, MapPin, MessageCircle } from "lucide-react";
+import { ShoppingCart, Heart, Edit, Trash2, ArrowLeft, ShieldCheck, Truck, RotateCcw, MapPin, MessageCircle, CreditCard } from "lucide-react";
 import { motion } from "framer-motion";
 import { useWishlist } from "@/context/WishlistContext";
 import { getImageUrl } from "@/lib/utils";
@@ -121,6 +121,25 @@ export default function ProductDetailPage() {
     } catch (error) {
       console.error("Error starting chat:", error);
       toast.error("Failed to start chat.");
+    }
+  };
+
+  const [buying, setBuying] = useState(false);
+
+  // ✅ Handle Buy Now
+  const handleBuyNow = async () => {
+    if (!user) {
+      router.push("/user/login");
+      return;
+    }
+    try {
+      setBuying(true);
+      const res = await axios.post("/orders/checkout", { productId: product.id });
+      window.location.href = res.data.url;
+    } catch (error) {
+      console.error("Error creating checkout session:", error);
+      toast.error("Failed to initiate checkout");
+      setBuying(false);
     }
   };
 
@@ -260,12 +279,26 @@ export default function ProductDetailPage() {
                 </>
               ) : (
                 <>
+                  {product.status === "SOLD" ? (
+                    <button disabled className="flex-1 bg-secondary-300 text-white px-8 py-4 rounded-xl font-semibold cursor-not-allowed flex items-center justify-center gap-2">
+                      Sold Out
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleBuyNow}
+                      disabled={buying}
+                      className="flex-[2] bg-green-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-green-700 transition-all shadow-lg shadow-green-500/30 flex items-center justify-center gap-2 transform active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed"
+                    >
+                      {buying ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <CreditCard size={20} />}
+                      Buy Now
+                    </button>
+                  )}
                   <button
                     onClick={handleChat}
-                    className="flex-[2] bg-primary-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2 transform active:scale-95"
+                    className="flex-1 bg-primary-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2 transform active:scale-95"
                   >
                     <MessageCircle size={20} />
-                    Chat with Seller
+                    Chat
                   </button>
                   <button
                     onClick={() => toggleWishlist(product)}
@@ -275,7 +308,6 @@ export default function ProductDetailPage() {
                       }`}
                   >
                     <Heart size={20} className={isInWishlist ? "fill-current" : ""} />
-                    {isInWishlist ? "Saved" : "Save"}
                   </button>
                 </>
               )}

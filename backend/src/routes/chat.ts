@@ -126,10 +126,10 @@ router.get("/:id", verifyToken, async (req, res) => {
 router.post("/:id/messages", verifyToken, async (req, res) => {
     try {
         const chatId = Number(req.params.id);
-        const { content } = req.body;
+        const { content, image } = req.body;
         const senderId = (req as any).user.id;
 
-        if (!content) return res.status(400).json({ message: "Message content required" });
+        if (!content && !image) return res.status(400).json({ message: "Message content or image required" });
 
         // Verify user is part of the chat
         const chat = await prisma.chat.findUnique({
@@ -144,7 +144,8 @@ router.post("/:id/messages", verifyToken, async (req, res) => {
             data: {
                 chatId,
                 senderId,
-                content,
+                content: content || "", // Allow empty content if image exists
+                image,
             },
         });
 

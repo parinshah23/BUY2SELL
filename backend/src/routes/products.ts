@@ -1,14 +1,13 @@
 import { Router } from "express";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../lib/prisma";
 import { verifyToken } from "../middlewares/authMiddleware";
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // CREATE PRODUCT (Protected)
 router.post("/", verifyToken, async (req, res) => {
   try {
-    const { title, description, price, category, images, location, latitude, longitude } = req.body;
+    const { title, description, price, category, images, location, latitude, longitude, stock } = req.body;
     const userData = (req as any).user; // user info from JWT middleware
 
     // Validation
@@ -21,6 +20,7 @@ router.post("/", verifyToken, async (req, res) => {
         title,
         description,
         price: parseFloat(price),
+        stock: stock ? parseInt(stock) : 1, // Default to 1
         category,
         images: images || [], // Array of strings
         location,
@@ -36,6 +36,53 @@ router.post("/", verifyToken, async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating product:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// ... (Get routes unchanged) ...
+
+// ✅ UPDATE PRODUCT (Protected)
+router.put("/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, price, category, images, location, stock } = req.body;
+    const userData = (req as any).user; // From JWT middleware
+
+    // Check if product exists
+    const product = await prisma.product.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Ensure the logged-in user owns this product
+    if (product.userId !== userData.id) {
+      return res.status(403).json({ message: "You are not authorized to update this product" });
+    }
+
+    // Update the product
+    const updated = await prisma.product.update({
+      where: { id: Number(id) },
+      data: {
+        title,
+        description,
+        price: parseFloat(price),
+        stock: stock ? parseInt(stock) : undefined,
+        category,
+        images,
+        location,
+      },
+    });
+
+    res.json({
+      message: "Product updated successfully",
+      product: updated,
+    });
+  } catch (error) {
+    console.error("Error updating product:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 });

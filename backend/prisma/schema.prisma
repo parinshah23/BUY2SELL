@@ -20,11 +20,39 @@ model User {
 
   // Relationships
   products     Product[]
-  orders       Order[]
+  orders       Order[]       @relation("BuyerOrders")
+  sales        Order[]       @relation("SellerOrders")
+  wallet       Wallet?
   chatsAsBuyer Chat[]    @relation("BuyerChats")
   chatsAsSeller Chat[]   @relation("SellerChats")
   messages     Message[]
   reviews      Review[]
+  
+  // Blocking & Reporting
+  blocksInitiated Block[] @relation("BlocksInitiated")
+  blocksReceived  Block[] @relation("BlocksReceived")
+  reportsInitiated Report[] @relation("ReportsInitiated")
+  reportsReceived  Report[] @relation("ReportsReceived")
+
+  // KYC & Address
+  isVerified Boolean @default(false)
+  kycStatus  KYCStatus @default(NOT_SUBMITTED)
+  kycDocs    String[]
+  addresses  Address[]
+}
+
+model Address {
+  id        Int      @id @default(autoincrement())
+  name      String   // Recipient Name
+  street    String
+  city      String
+  state     String
+  zip       String
+  country   String
+  isDefault Boolean  @default(false)
+  
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
 }
 
 model Product {
@@ -32,6 +60,7 @@ model Product {
   title       String
   description String
   price       Float
+  stock       Int      @default(1) // Inventory Count
   category    String
   images      String[] // Changed from single image to array
   location    String?  // New: City, State
@@ -45,7 +74,7 @@ model Product {
   userId Int
 
   // Relationship with Order
-  order Order?
+  orders Order[]
   chats Chat[]
   reviews Review[]
 }
@@ -53,12 +82,46 @@ model Product {
 model Order {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  status    OrderStatus @default(PENDING)
+  totalAmount     Float // Total paid by buyer
+  platformFee     Float // 4% fee
+  sellerEarnings  Float // Amount to be transferred to seller
+
+  stripeSessionId String? @unique
+  paymentIntentId String?
 
   product   Product  @relation(fields: [productId], references: [id])
-  productId Int      @unique // A product can only be in one order
+  productId Int      // Removed @unique to allow product history if needed, but for now logic enforces single active order
 
-  buyer     User     @relation(fields: [buyerId], references: [id])
+  buyer     User     @relation("BuyerOrders", fields: [buyerId], references: [id])
   buyerId   Int
+
+  seller    User     @relation("SellerOrders", fields: [sellerId], references: [id])
+  sellerId  Int
+}
+
+model Wallet {
+  id        Int      @id @default(autoincrement())
+  balance   Float    @default(0.0) // Available for withdrawal
+  pending   Float    @default(0.0) // Held in escrow
+
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int      @unique
+
+  transactions WalletTransaction[]
+}
+
+model WalletTransaction {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  type      TransactionType
+  description String
+  createdAt DateTime @default(now())
+
+  wallet    Wallet   @relation(fields: [walletId], references: [id])
+  walletId  Int
 }
 
 model Chat {
@@ -82,7 +145,8 @@ model Chat {
 
 model Message {
   id        Int      @id @default(autoincrement())
-  content   String
+  content   String?  // Made optional for image-only messages
+  image     String?  // New: Image attachment
   createdAt DateTime @default(now())
   read      Boolean  @default(false)
 
@@ -108,7 +172,64 @@ model Review {
   @@unique([productId, userId]) // One review per product per user
 }
 
+model Block {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+
+  blocker   User @relation("BlocksInitiated", fields: [blockerId], references: [id])
+  blockerId Int
+
+  blocked   User @relation("BlocksReceived", fields: [blockedId], references: [id])
+  blockedId Int
+
+  @@unique([blockerId, blockedId])
+}
+
+model Report {
+  id        Int      @id @default(autoincrement())
+  reason    String
+  createdAt DateTime @default(now())
+  status    ReportStatus @default(PENDING)
+
+  reporter   User @relation("ReportsInitiated", fields: [reporterId], references: [id])
+  reporterId Int
+
+  reported   User @relation("ReportsReceived", fields: [reportedId], references: [id])
+  reportedId Int
+}
+
 enum ProductStatus {
   AVAILABLE
   SOLD
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  DISPUTED
+  CANCELLED
+  REFUNDED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  SALE
+  REFUND
+}
+
+enum KYCStatus {
+  NOT_SUBMITTED
+  PENDING
+  VERIFIED
+  REJECTED
 }

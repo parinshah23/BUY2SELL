@@ -1,0 +1,82 @@
+1. Real Estate, Cars, Electronics, Fashion , Crafts, Services (Freelancing, Coaching, Repair and Maintenance, Marketing and SEO) , Pets , Toys, Furniture , Tools and Hardware, Sports and Fitness, Rentals
+2. Clean & Mininmal UI, One Account> Multiple Roles (Non Separated buyer seller signups
+3. Escrow System, Buyer Pays, Platform holds payment, Seller delivers, Buyer confirms, Platform releases funds AUTOMATED. (Payment System Stripe)
+4. In-App-Real-Time Chat Buyer-Seller Chat , Text + Images, Order-Linked Chats , Block and report Option , Admin monitoring (Limited)
+5. User Account Contains
+	Profile info
+	Email / Phone verification
+	KYC (if required)
+	Address book
+	Notifications
+	Ratings & reviews
+	Transaction history
+ Buyer Features
+	Browse & search products
+	Wishlist
+	Place orders
+	Track orders
+	Chat with seller
+	Rate/review seller
+	Raise disputes/refunds
+Seller Features
+	Create listings
+	Upload images/videos
+	Set price & stock
+	Manage orders
+	Chat with buyers
+	View earnings
+	Withdraw funds
+	Respond to disputes
+
+ Same user can buy in one order and sell in another
+
+Admin Panel Content
+
+Admin Dashboard
+
+Total users
+Active sellers
+Orders & revenue
+Platform commission
+Disputes overview
+
+User Management
+
+Approve/block users
+KYC verification
+Role permissions
+View user activity
+
+Product Management
+
+Approve/reject listings
+Category management
+Flag prohibited items
+Featured products
+Payment Management
+Commission settings (4%)
+
+Refund handling
+
+Seller payouts
+Tax reports
+
+Content Management
+
+Homepage banners
+Static pages (About, Terms)
+Notifications & emails
+
+Dispute & Support
+
+Chat access
+Refund approvals
+Account suspensions
+
+7. Buyer-Seller Roles
+
+Do NOT create separate buyer & seller accounts
+Create ONE user account
+User can switch roles per action
+Permissions unlock when user lists a product
+

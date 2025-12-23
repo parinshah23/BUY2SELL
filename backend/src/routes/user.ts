@@ -35,4 +35,103 @@ router.put("/profile", verifyToken, async (req, res) => {
     }
 });
 
+// ✅ BLOCK USER
+router.post("/:id/block", verifyToken, async (req, res) => {
+    try {
+        const blockerId = (req as any).user.id;
+        const blockedId = Number(req.params.id);
+
+        if (blockerId === blockedId) {
+            return res.status(400).json({ message: "You cannot block yourself" });
+        }
+
+        await prisma.block.create({
+            data: {
+                blockerId,
+                blockedId,
+            },
+        });
+
+        res.json({ message: "User blocked successfully" });
+    } catch (error) {
+        // Unique constraint failed = already blocked
+        if ((error as any).code === 'P2002') {
+            return res.status(400).json({ message: "User already blocked" });
+        }
+        console.error("Error blocking user:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+// ✅ UNBLOCK USER
+router.delete("/:id/block", verifyToken, async (req, res) => {
+    try {
+        const blockerId = (req as any).user.id;
+        const blockedId = Number(req.params.id);
+
+        await prisma.block.deleteMany({
+            where: {
+                blockerId,
+                blockedId,
+            },
+        });
+
+        res.json({ message: "User unblocked successfully" });
+    } catch (error) {
+        console.error("Error unblocking user:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+// ✅ REPORT USER
+router.post("/:id/report", verifyToken, async (req, res) => {
+    try {
+        const reporterId = (req as any).user.id;
+        const reportedId = Number(req.params.id);
+        const { reason } = req.body;
+
+        if (!reason) {
+            return res.status(400).json({ message: "Reason is required" });
+        }
+
+        await prisma.report.create({
+            data: {
+                reporterId,
+                reportedId,
+                reason,
+            },
+        });
+
+        res.json({ message: "User reported successfully" });
+    } catch (error) {
+        console.error("Error reporting user:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+// ✅ GET BLOCKED USERS
+router.get("/blocked", verifyToken, async (req, res) => {
+    try {
+        const userId = (req as any).user.id;
+
+        const blockedUsers = await prisma.block.findMany({
+            where: { blockerId: userId },
+            include: {
+                blocked: {
+                    select: {
+                        id: true,
+                        name: true,
+                        avatar: true
+                    }
+                }
+            }
+        });
+
+        res.json({ blockedUsers: blockedUsers.map(b => b.blocked) });
+    } catch (error) {
+        console.error("Error fetching blocked users:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
 export default router;

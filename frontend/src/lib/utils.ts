@@ -17,3 +17,10 @@ export const getImageUrl = (path: string | undefined | null) => {
 
     return `${backendUrl}${path}`;
 };
+
+export const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("en-IE", {
+        style: "currency",
+        currency: "EUR",
+    }).format(price);
+};

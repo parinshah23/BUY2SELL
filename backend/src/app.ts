@@ -14,10 +14,16 @@ import adminRouter from "./routes/admin";
 import reviewRouter from "./routes/reviews";
 import orderRouter from "./routes/orders";
 import statsRouter from "./routes/stats";
+import webhookRouter from "./routes/webhook";
+import walletRouter from "./routes/wallet";
+import addressRouter from "./routes/address";
 
 dotenv.config();
 
 const app = express();
+
+// ✅ Webhook must be defined BEFORE express.json() to capture raw body
+app.use("/api/v1/webhook", webhookRouter);
 
 app.use(express.json());
 app.use(cors());
@@ -34,8 +40,10 @@ app.use("/api/v1/upload", uploadRouter);
 app.use("/api/v1/chats", chatRouter);
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/admin", adminRouter);
-app.use("/api/v1", reviewRouter);
-app.use("/api/v1", orderRouter);
+app.use("/api/v1/review", reviewRouter);
+app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/stats", statsRouter);
+app.use("/api/v1/wallet", walletRouter);
+app.use("/api/v1/address", addressRouter);
 
 export default app;

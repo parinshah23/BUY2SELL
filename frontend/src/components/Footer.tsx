@@ -10,7 +10,11 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* 🏢 Company Info */}
           <div className="space-y-4">
-            <h3 className="text-2xl font-bold text-white tracking-tight">Buy2Sell</h3>
+            <img
+              src="/logo.png"
+              alt="Buy2Sell Logo"
+              className="h-20 w-auto object-contain bg-white rounded-lg p-1"
+            />
             <p className="text-secondary-400 text-sm leading-relaxed">
               The most trusted marketplace for buying and selling high-quality products.
               Join our community today and experience seamless transactions.

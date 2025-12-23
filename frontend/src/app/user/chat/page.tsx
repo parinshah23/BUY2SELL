@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "@/lib/axios";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, User, MessageCircle, ArrowLeft } from "lucide-react";
+import { Send, User, MessageCircle, ArrowLeft, Image as ImageIcon, MoreVertical, Ban, AlertTriangle, X } from "lucide-react";
 import { io } from "socket.io-client";
+import { toast } from "sonner";
 
 export default function ChatPage() {
     const router = useRouter();
@@ -18,44 +19,40 @@ export default function ChatPage() {
     const [messages, setMessages] = useState<any[]>([]);
     const [newMessage, setNewMessage] = useState("");
     const [loading, setLoading] = useState(true);
-    const [isTyping, setIsTyping] = useState(false); // Am I typing?
-    const [typingUser, setTypingUser] = useState<string | null>(null); // Who is typing?
+    const [isTyping, setIsTyping] = useState(false);
+    const [typingUser, setTypingUser] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [showMenu, setShowMenu] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const socket = useRef<any>(null);
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // ... (Socket Code Omitted for brevity, unchanged) ...
     // ✅ Initialize Socket.io
     useEffect(() => {
-        // Derive socket URL from API URL (remove /api/v1)
         const socketUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api/v1", "") || "http://localhost:5000";
         socket.current = io(socketUrl);
 
         socket.current.on("receive_message", (data: any) => {
-            // 1. Update Messages (if in current chat)
             if (String(data.chatId) === String(currentChatId)) {
                 setMessages((prev) => [...prev, data]);
                 setTypingUser(null);
-                // Mark as read immediately if user is viewing this chat
                 axios.put(`/chats/${currentChatId}/read`);
             }
-
-            // 2. Update Sidebar (Chats List + Unread Count)
             setChats((prevChats) => {
                 const existingChatIndex = prevChats.findIndex(c => c.id === Number(data.chatId));
                 if (existingChatIndex === -1) return prevChats;
-
                 const updatedChats = [...prevChats];
                 const isCurrentChat = String(data.chatId) === String(currentChatId);
-
                 const updatedChat = {
                     ...updatedChats[existingChatIndex],
                     messages: [data],
                     unreadCount: isCurrentChat ? 0 : (updatedChats[existingChatIndex].unreadCount || 0) + 1,
                     updatedAt: new Date().toISOString()
                 };
-
                 updatedChats.splice(existingChatIndex, 1);
                 updatedChats.unshift(updatedChat);
                 return updatedChats;
@@ -79,21 +76,16 @@ export default function ChatPage() {
         };
     }, [currentChatId, user?.id]);
 
-    // ✅ Reset Unread Count when entering a chat
+    // ... (Other UseEffects Unchanged) ...
     useEffect(() => {
         if (currentChatId) {
-            // 1. API Call
             axios.put(`/chats/${currentChatId}/read`);
-
-            // 2. Local State Update
             setChats(prev => prev.map(c =>
                 c.id === Number(currentChatId) ? { ...c, unreadCount: 0 } : c
             ));
         }
     }, [currentChatId]);
 
-
-    // ✅ Join Room when Chat ID changes
     useEffect(() => {
         if (currentChatId && socket.current) {
             socket.current.emit("join_room", currentChatId);
@@ -101,8 +93,6 @@ export default function ChatPage() {
         }
     }, [currentChatId]);
 
-
-    // ✅ Fetch all chats
     useEffect(() => {
         const fetchChats = async () => {
             try {
@@ -115,12 +105,10 @@ export default function ChatPage() {
             }
         };
         fetchChats();
-    }, []); // Only fetch once on mount (updates handled by socket/local)
+    }, []);
 
-    // ✅ Fetch messages for selected chat (Initial Load)
     useEffect(() => {
         if (!currentChatId) return;
-
         const fetchMessages = async () => {
             try {
                 const res = await axios.get(`/chats/${currentChatId}`);
@@ -129,91 +117,114 @@ export default function ChatPage() {
                 console.error("Error fetching messages:", error);
             }
         };
-
         fetchMessages();
     }, [currentChatId]);
 
     const isFirstLoad = useRef(true);
+    useEffect(() => { isFirstLoad.current = true; }, [currentChatId]);
 
-    // Reset first load flag when chat changes
-    useEffect(() => {
-        isFirstLoad.current = true;
-    }, [currentChatId]);
-
-    // ✅ Smart Scroll to bottom
     useEffect(() => {
         if (messages.length === 0 || !containerRef.current) return;
-
         const container = containerRef.current;
-
         if (isFirstLoad.current) {
-            // Initial load: Jump to bottom
             container.scrollTop = container.scrollHeight;
             isFirstLoad.current = false;
         } else {
-            // Subsequent updates: Smooth scroll only if already near bottom
             const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
             if (isNearBottom) {
-                // Use setTimeout to ensure DOM is updated
                 setTimeout(() => {
                     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
                 }, 100);
             }
         }
-    }, [messages, typingUser]); // Also scroll when typing indicator appears
+    }, [messages, typingUser]);
+
 
     // ✅ Handle Typing
     const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
         setNewMessage(e.target.value);
-
         if (!socket.current || !currentChatId) return;
-
         if (!isTyping) {
             setIsTyping(true);
             socket.current.emit("typing", { room: currentChatId, userId: user?.id, name: user?.name });
         }
-
-        // Debounce stop typing
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-
         typingTimeoutRef.current = setTimeout(() => {
             setIsTyping(false);
             socket.current.emit("stop_typing", { room: currentChatId });
         }, 2000);
     };
 
+    const [selectedImage, setSelectedImage] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-    // ✅ Send Message
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !currentChatId) return;
+    // ✅ Handle Image Selection
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files?.[0]) return;
+        const file = e.target.files[0];
+        setSelectedImage(file);
+        setPreviewUrl(URL.createObjectURL(file));
 
-        // Stop typing immediately
+        // Reset input so same file can be selected again if needed
+        e.target.value = "";
+    };
+
+    // ✅ Remove Selected Image
+    const removeImage = () => {
+        setSelectedImage(null);
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(null);
+    };
+
+    // ✅ Send Message (Text + Optional Image)
+    const sendMessage = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+
+        if ((!newMessage.trim() && !selectedImage) || !currentChatId || uploading) return;
+
+        // Clear typing indicator
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
         setIsTyping(false);
         socket.current?.emit("stop_typing", { room: currentChatId });
 
+        let imageUrl = "";
+
         try {
-            // 1. Save to Database via REST API
+            setUploading(true);
+
+            // 1. Upload Image if selected
+            if (selectedImage) {
+                const formData = new FormData();
+                formData.append("image", selectedImage);
+
+                const uploadRes = await axios.post("/upload", formData, {
+                    headers: { "Content-Type": "multipart/form-data" },
+                });
+                imageUrl = uploadRes.data.imageUrl;
+            }
+
+            // 2. Send Message to Backend
             const res = await axios.post(`/chats/${currentChatId}/messages`, {
                 content: newMessage,
+                image: imageUrl || undefined,
             });
 
-            const savedMessage = res.data.data;
+            // 3. Clear Input & State
+            setNewMessage("");
+            removeImage();
 
-            // 2. Add to local state
+            // 4. Update UI Optimistically
+            const savedMessage = res.data.data;
             const messageWithSender = {
                 ...savedMessage,
                 sender: { id: user?.id, name: user?.name }
             };
-            setMessages((prev) => [...prev, messageWithSender]);
-            setNewMessage("");
 
-            // 3. Update Sidebar immediately for sender
+            setMessages((prev) => [...prev, messageWithSender]);
+
             setChats((prevChats) => {
                 const existingChatIndex = prevChats.findIndex(c => c.id === Number(currentChatId));
                 if (existingChatIndex === -1) return prevChats;
-
                 const updatedChats = [...prevChats];
                 const updatedChat = {
                     ...updatedChats[existingChatIndex],
@@ -225,7 +236,7 @@ export default function ChatPage() {
                 return updatedChats;
             });
 
-            // 4. Emit to Socket
+            // 5. Emit Socket Event
             socket.current.emit("send_message", {
                 room: currentChatId,
                 ...messageWithSender
@@ -233,15 +244,44 @@ export default function ChatPage() {
 
         } catch (error) {
             console.error("Error sending message:", error);
+            toast.error("Failed to send message");
+        } finally {
+            setUploading(false);
         }
     };
 
-    // Select chat
+    // ✅ Block User
+    const handleBlockUser = async (userId: number) => {
+        if (!confirm("Are you sure you want to block this user?")) return;
+        try {
+            await axios.post(`/users/${userId}/block`);
+            toast.success("User blocked");
+            setShowMenu(false);
+        } catch (error) {
+            toast.error("Failed to block user");
+        }
+    };
+
+    // ✅ Report User
+    const handleReportUser = async (userId: number) => {
+        const reason = prompt("Please enter a reason for reporting:");
+        if (!reason) return;
+
+        try {
+            await axios.post(`/users/${userId}/report`, { reason });
+            toast.success("User reported");
+            setShowMenu(false);
+        } catch (error) {
+            toast.error("Failed to report user");
+        }
+    };
+
     const handleSelectChat = (chatId: number) => {
         router.push(`/user/chat?id=${chatId}`);
     };
 
     const activeChat = chats.find((c) => c.id === Number(currentChatId));
+    const activeChatOtherUser = activeChat ? (activeChat.buyerId === user?.id ? activeChat.seller : activeChat.buyer) : null;
 
     return (
         <div className="bg-secondary-50 min-h-screen py-8">
@@ -256,7 +296,6 @@ export default function ChatPage() {
                                 Messages
                             </h2>
                         </div>
-
                         <div className="flex-1 overflow-y-auto p-4 space-y-2">
                             {loading ? (
                                 <div className="text-center text-secondary-400 py-10">Loading chats...</div>
@@ -266,13 +305,11 @@ export default function ChatPage() {
                                 chats.map((chat) => {
                                     const otherUser = chat.buyerId === user?.id ? chat.seller : chat.buyer;
                                     const isActive = chat.id === Number(currentChatId);
-
                                     return (
                                         <button
                                             key={chat.id}
                                             onClick={() => handleSelectChat(chat.id)}
-                                            className={`w-full p-4 rounded-xl flex items-start gap-3 transition-all text-left ${isActive ? "bg-primary-50 border border-primary-100" : "hover:bg-secondary-50 border border-transparent"
-                                                }`}
+                                            className={`w-full p-4 rounded-xl flex items-start gap-3 transition-all text-left ${isActive ? "bg-primary-50 border border-primary-100" : "hover:bg-secondary-50 border border-transparent"}`}
                                         >
                                             <div className="w-10 h-10 bg-secondary-200 rounded-full flex items-center justify-center text-secondary-600 font-bold flex-shrink-0">
                                                 {otherUser.name.charAt(0).toUpperCase()}
@@ -289,7 +326,7 @@ export default function ChatPage() {
                                                 </p>
                                                 <div className="flex justify-between items-center mt-1">
                                                     <p className={`text-xs truncate ${isActive ? "text-primary-700" : "text-secondary-400"}`}>
-                                                        {chat.messages[0]?.content || "No messages yet"}
+                                                        {chat.messages[0]?.image ? "📷 Image" : (chat.messages[0]?.content || "No messages yet")}
                                                     </p>
                                                     {chat.unreadCount > 0 && (
                                                         <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg shadow-red-500/30">
@@ -310,29 +347,55 @@ export default function ChatPage() {
                         {currentChatId ? (
                             <>
                                 {/* Header */}
-                                <div className="p-4 border-b border-secondary-100 flex items-center gap-4 bg-white shadow-sm z-10">
-                                    <button
-                                        onClick={() => router.push("/user/chat")}
-                                        className="md:hidden p-2 hover:bg-secondary-50 rounded-full"
-                                    >
-                                        <ArrowLeft size={20} />
-                                    </button>
+                                <div className="p-4 border-b border-secondary-100 flex items-center justify-between bg-white shadow-sm z-10 relative">
+                                    <div className="flex items-center gap-4">
+                                        <button onClick={() => router.push("/user/chat")} className="md:hidden p-2 hover:bg-secondary-50 rounded-full">
+                                            <ArrowLeft size={20} />
+                                        </button>
+                                        {activeChat && (
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold">
+                                                    {activeChatOtherUser?.name.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-secondary-900">{activeChatOtherUser?.name}</h3>
+                                                    <p className="text-xs text-secondary-500 flex items-center gap-1">
+                                                        Product: <span className="font-medium text-primary-600">{activeChat.product.title}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
 
-                                    {activeChat && (
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-primary-100 text-primary-700 rounded-full flex items-center justify-center font-bold">
-                                                {(activeChat.buyerId === user?.id ? activeChat.seller : activeChat.buyer).name.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <h3 className="font-bold text-secondary-900">
-                                                    {(activeChat.buyerId === user?.id ? activeChat.seller : activeChat.buyer).name}
-                                                </h3>
-                                                <p className="text-xs text-secondary-500 flex items-center gap-1">
-                                                    Product: <span className="font-medium text-primary-600">{activeChat.product.title}</span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
+                                    {/* Action Menu */}
+                                    <div className="relative">
+                                        <button onClick={() => setShowMenu(!showMenu)} className="p-2 text-secondary-500 hover:bg-secondary-50 rounded-full transition-colors">
+                                            <MoreVertical size={20} />
+                                        </button>
+                                        <AnimatePresence>
+                                            {showMenu && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.95 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.95 }}
+                                                    className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-xl border border-secondary-100 p-1 z-50 origin-top-right"
+                                                >
+                                                    <button
+                                                        onClick={() => handleReportUser(activeChatOtherUser.id)}
+                                                        className="w-full text-left px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 rounded-lg flex items-center gap-2"
+                                                    >
+                                                        <AlertTriangle size={16} /> Report User
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleBlockUser(activeChatOtherUser.id)}
+                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2"
+                                                    >
+                                                        <Ban size={16} /> Block User
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
                                 </div>
 
                                 {/* Messages */}
@@ -341,13 +404,11 @@ export default function ChatPage() {
                                         const isMe = msg.senderId === user?.id;
                                         return (
                                             <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                                                <div
-                                                    className={`max-w-[75%] p-4 rounded-2xl shadow-sm ${isMe
-                                                        ? "bg-primary-600 text-white rounded-tr-none"
-                                                        : "bg-white text-secondary-800 border border-secondary-100 rounded-tl-none"
-                                                        }`}
-                                                >
-                                                    <p className="text-sm">{msg.content}</p>
+                                                <div className={`max-w-[75%] p-4 rounded-2xl shadow-sm ${isMe ? "bg-primary-600 text-white rounded-tr-none" : "bg-white text-secondary-800 border border-secondary-100 rounded-tl-none"}`}>
+                                                    {msg.image && (
+                                                        <img src={msg.image} alt="Attachment" className="w-full h-auto rounded-lg mb-2 object-cover max-h-[300px]" />
+                                                    )}
+                                                    {msg.content && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>}
                                                     <span className={`text-[10px] mt-1 block ${isMe ? "text-primary-200" : "text-secondary-400"}`}>
                                                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
@@ -355,16 +416,9 @@ export default function ChatPage() {
                                             </div>
                                         );
                                     })}
-
-                                    {/* Typing Indicator */}
                                     <AnimatePresence>
                                         {typingUser && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: 10 }}
-                                                className="flex justify-start"
-                                            >
+                                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="flex justify-start">
                                                 <div className="bg-white px-4 py-2 rounded-2xl rounded-tl-none border border-secondary-100 shadow-sm flex items-center gap-1">
                                                     <span className="text-xs text-secondary-400 mr-2">{typingUser} is typing</span>
                                                     <div className="w-1.5 h-1.5 bg-secondary-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
@@ -374,13 +428,42 @@ export default function ChatPage() {
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
-
                                     <div ref={messagesEndRef} />
                                 </div>
 
                                 {/* Input */}
                                 <div className="p-4 bg-white border-t border-secondary-100">
-                                    <form onSubmit={handleSendMessage} className="flex gap-3">
+                                    {/* Image Preview */}
+                                    {previewUrl && (
+                                        <div className="mb-3 relative inline-block">
+                                            <img src={previewUrl} alt="Preview" className="h-20 w-auto rounded-lg border border-secondary-200 object-cover" />
+                                            <button
+                                                onClick={removeImage}
+                                                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm hover:bg-red-600 transition-colors"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <form onSubmit={sendMessage} className="flex gap-3 items-center">
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleImageSelect}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploading}
+                                            className="p-3 rounded-xl border border-secondary-200 text-secondary-500 hover:bg-secondary-50 transition-colors disabled:opacity-50"
+                                            title="Attach Image"
+                                        >
+                                            <ImageIcon size={20} />
+                                        </button>
+
                                         <input
                                             type="text"
                                             value={newMessage}
@@ -390,10 +473,10 @@ export default function ChatPage() {
                                         />
                                         <button
                                             type="submit"
-                                            disabled={!newMessage.trim()}
+                                            disabled={(!newMessage.trim() && !selectedImage) || uploading}
                                             className="bg-primary-600 text-white p-3 rounded-xl hover:bg-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-500/20"
                                         >
-                                            <Send size={20} />
+                                            {uploading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Send size={20} />}
                                         </button>
                                     </form>
                                 </div>

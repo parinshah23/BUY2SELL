@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, Heart, User, LogOut, ShoppingBag, MessageCircle, Package } from "lucide-react";
+import { Menu, X, Heart, User, LogOut, ShoppingBag, MessageCircle, Package, Wallet, MapPin } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/context/WishlistContext";
@@ -64,12 +64,11 @@ export default function Navbar() {
             href="/"
             className="flex items-center gap-2 group"
           >
-            <div className="bg-primary-600 text-white p-2 rounded-xl group-hover:rotate-3 transition-transform duration-300">
-              <ShoppingBag size={24} />
-            </div>
-            <span className="text-2xl font-bold tracking-tight text-secondary-900">
-              Buy2Sell
-            </span>
+            <img
+              src="/logo.png"
+              alt="Buy2Sell Logo"
+              className="h-24 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            />
           </Link>
 
           {/* 🧭 Desktop Nav */}
@@ -141,25 +140,56 @@ export default function Navbar() {
                   )}
                 </button>
 
-                <div className="flex items-center gap-3 pl-4 border-l border-secondary-200">
-                  <div className="text-right hidden lg:block">
-                    <p className="text-sm font-semibold text-secondary-900 leading-none">
-                      {user?.name?.split(" ")[0] ?? "User"}
-                    </p>
-                    <Link href="/user/my-products" className="text-xs text-primary-600 hover:underline block">
-                      My Dashboard
-                    </Link>
-                    <Link href="/user/profile" className="text-xs text-secondary-500 hover:text-primary-600 hover:underline block mt-1">
-                      Edit Profile
-                    </Link>
-                  </div>
+                <div className="relative ml-4 group">
                   <button
-                    onClick={logout}
-                    className="p-2 text-secondary-500 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
-                    title="Logout"
+                    onClick={() => router.push("/user/profile")}
+                    className="flex items-center gap-2 focus:outline-none"
                   >
-                    <LogOut size={20} />
+                    <div className="text-right hidden lg:block">
+                      <p className="text-sm font-semibold text-secondary-900 leading-none">
+                        {user?.name?.split(" ")[0] ?? "User"}
+                      </p>
+                      <p className="text-[10px] text-secondary-500 font-medium mt-0.5">My Account</p>
+                    </div>
+                    <div className="w-10 h-10 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-bold text-lg border-2 border-white shadow-sm group-hover:bg-primary-600 group-hover:text-white transition-colors">
+                      {user.name ? user.name.charAt(0).toUpperCase() : "U"}
+                    </div>
                   </button>
+
+                  {/* Dropdown Menu (Group Hover) */}
+                  <div className="absolute right-0 top-full pt-2 w-56 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
+                    <div className="bg-white rounded-xl shadow-xl border border-secondary-100 overflow-hidden p-2">
+                      <div className="px-4 py-3 border-b border-secondary-100 mb-2">
+                        <p className="text-sm font-bold text-secondary-900 truncate">{user.name}</p>
+                        <p className="text-xs text-secondary-500 truncate">{user.email}</p>
+                      </div>
+
+                      <Link href="/user/my-products" className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors">
+                        <Package size={16} /> Dashboard
+                      </Link>
+                      <Link href="/user/profile" className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors">
+                        <User size={16} /> Edit Profile
+                      </Link>
+                      <Link href="/user/orders" className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors">
+                        <ShoppingBag size={16} /> My Orders
+                      </Link>
+                      <Link href="/user/wallet" className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors">
+                        <Wallet size={16} /> My Wallet
+                      </Link>
+                      <Link href="/user/addresses" className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors">
+                        <MapPin size={16} /> My Addresses
+                      </Link>
+
+                      <div className="h-px bg-secondary-100 my-2" />
+
+                      <button
+                        onClick={logout}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <LogOut size={16} /> Logout
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </>
             ) : (
@@ -238,6 +268,22 @@ export default function Navbar() {
                     >
                       <Package size={20} />
                       My Orders
+                    </Link>
+                    <Link
+                      href="/user/wallet"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 text-secondary-700 font-medium"
+                    >
+                      <p className="font-bold">$</p>
+                      My Wallet
+                    </Link>
+                    <Link
+                      href="/user/addresses"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 text-secondary-700 font-medium"
+                    >
+                      <MapPin size={20} />
+                      My Addresses
                     </Link>
                     <Link
                       href="/user/chat"

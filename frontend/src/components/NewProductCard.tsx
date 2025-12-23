@@ -110,12 +110,23 @@ export default function NewProductCard({
             >
               {product.category || "General"}
             </CardItem>
-            <CardItem
-              translateZ="40"
-              className="text-lg font-bold text-secondary-900"
-            >
-              €{product.price}
-            </CardItem>
+
+            <div className="flex flex-col items-end">
+              <CardItem
+                translateZ="40"
+                className="text-lg font-bold text-secondary-900"
+              >
+                €{product.price}
+              </CardItem>
+              {product.stock !== undefined && (
+                <CardItem
+                  translateZ="30"
+                  className={`text-xs font-bold ${product.stock > 0 ? "text-green-600" : "text-red-600"}`}
+                >
+                  {product.stock > 0 ? `${product.stock} in stock` : "Out of Stock"}
+                </CardItem>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-between items-center mt-4 gap-2">
@@ -151,6 +162,6 @@ export default function NewProductCard({
           </div>
         </div>
       </CardBody>
-    </CardContainer>
+    </CardContainer >
   );
 }

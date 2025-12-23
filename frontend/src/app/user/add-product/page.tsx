@@ -38,6 +38,7 @@ export default function AddProductPage() {
     title: "",
     description: "",
     price: "",
+    stock: 1,
     category: "",
     location: "",
     images: [] as string[],
@@ -63,6 +64,7 @@ export default function AddProductPage() {
           category: product.category,
           location: product.location || "",
           images: product.images || (product.image ? [product.image] : []),
+          stock: product.stock || 1,
         });
 
         setIsEditing(true);
@@ -218,7 +220,7 @@ export default function AddProductPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-secondary-700 mb-2" htmlFor="price">Price (₹)</label>
                 <input
@@ -232,6 +234,22 @@ export default function AddProductPage() {
                   className="w-full px-4 py-3 rounded-xl border border-secondary-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-secondary-700 mb-2" htmlFor="stock">Stock Quantity</label>
+                <input
+                  type="number"
+                  id="stock"
+                  name="stock"
+                  value={form.stock}
+                  onChange={handleChange}
+                  placeholder="e.g. 1"
+                  min="1"
+                  required
+                  className="w-full px-4 py-3 rounded-xl border border-secondary-300 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
+                />
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-secondary-700 mb-2" htmlFor="category">Category</label>
                 <div className="relative">
