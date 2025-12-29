@@ -11,7 +11,7 @@ export default function Footer() {
           {/* 🏢 Company Info */}
           <div className="space-y-4">
             <img
-              src="/logo.png"
+              src="/logo(1).png"
               alt="Buy2Sell Logo"
               className="h-20 w-auto object-contain bg-white rounded-lg p-1"
             />

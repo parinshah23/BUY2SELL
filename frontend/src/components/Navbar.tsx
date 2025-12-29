@@ -65,9 +65,9 @@ export default function Navbar() {
             className="flex items-center gap-2 group"
           >
             <img
-              src="/logo.png"
+              src="/logo(1).png"
               alt="Buy2Sell Logo"
-              className="h-24 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+              className="h-26 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
             />
           </Link>
 
