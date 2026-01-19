@@ -12,6 +12,7 @@ export default function NewAdminLayout({ children }: { children: React.ReactNode
     { href: "/admin", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
     { href: "/admin/users", label: "Manage Users", icon: <Users size={20} /> },
     { href: "/admin/products", label: "Manage Products", icon: <ShoppingBag size={20} /> },
+    { href: "/admin/kyc", label: "KYC Verification", icon: <FileText size={20} /> },
     { href: "/admin/reports", label: "Reports", icon: <FileText size={20} /> },
   ];
 

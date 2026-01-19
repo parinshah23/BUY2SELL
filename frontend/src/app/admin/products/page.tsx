@@ -1,95 +1,124 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import api from "@/lib/axios";
+import axios from "@/lib/axios";
+import { Loader2, Check, X, Eye, ShoppingBag } from "lucide-react";
+import { toast } from "sonner";
+import { getImageUrl } from "@/lib/utils";
+import Image from "next/image";
+import Link from "next/link"; // Assuming we link to public product page
 
-interface Product {
-  id: number;
-  title: string;
-  description: string;
-  price: number;
-  category: string;
-  images: string[];
-  location?: string;
-  createdAt: string;
-}
-
-export default function ManageProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function AdminProductsPage() {
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState<number | null>(null);
 
-  const fetchProducts = async () => {
+  const fetchPendingProducts = async () => {
     try {
-      const res = await api.get("/products");
-      setProducts(res.data.products || []);
+      const res = await axios.get("/admin/products/pending");
+      setProducts(res.data.products);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      console.error("Error fetching pending products:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+  useEffect(() => {
+    fetchPendingProducts();
+  }, []);
 
+  const handleApprove = async (id: number) => {
     try {
-      setDeleting(id);
-      await api.delete(`/products/${id}`);
-      setProducts(products.filter((p) => p.id !== id));
-      alert("Product deleted successfully!");
+      await axios.post(`/admin/products/${id}/approve`);
+      toast.success("Product approved for listing");
+      setProducts(products.filter(p => p.id !== id));
     } catch (error) {
-      console.error("Error deleting product:", error);
-      alert("Failed to delete product.");
-    } finally {
-      setDeleting(null);
+      toast.error("Failed to approve product");
     }
   };
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const handleReject = async (id: number) => {
+    try {
+      await axios.post(`/admin/products/${id}/reject`);
+      toast.success("Product rejected");
+      setProducts(products.filter(p => p.id !== id));
+    } catch (error) {
+      toast.error("Failed to reject product");
+    }
+  };
 
-  if (loading) return <p>Loading products...</p>;
+  if (loading) return <Loader2 className="animate-spin text-primary-600 m-8" />;
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold mb-4">Manage Products</h2>
+    <div className="bg-white p-8 rounded-2xl shadow-sm border border-secondary-100">
+      <h1 className="text-2xl font-bold text-secondary-900 mb-6">Product Moderation</h1>
 
       {products.length === 0 ? (
-        <p className="text-gray-500">No products found.</p>
+        <div className="text-center py-20 bg-secondary-50 rounded-2xl">
+          <ShoppingBag className="mx-auto h-12 w-12 text-secondary-300 mb-4" />
+          <p className="text-secondary-500 font-medium">No products pending approval.</p>
+        </div>
       ) : (
-        <table className="min-w-full border border-gray-300 bg-white shadow-sm rounded-lg">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="py-2 px-4 text-left">ID</th>
-              <th className="py-2 px-4 text-left">Title</th>
-              <th className="py-2 px-4 text-left">Category</th>
-              <th className="py-2 px-4 text-left">Location</th>
-              <th className="py-2 px-4 text-left">Price</th>
-              <th className="py-2 px-4 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map((p) => (
-              <tr key={p.id} className="border-t hover:bg-gray-50">
-                <td className="py-2 px-4">{p.id}</td>
-                <td className="py-2 px-4 font-medium">{p.title}</td>
-                <td className="py-2 px-4">{p.category}</td>
-                <td className="py-2 px-4">{p.location || "N/A"}</td>
-                <td className="py-2 px-4">€{p.price.toFixed(2)}</td>
-                <td className="py-2 px-4">
-                  <button
-                    onClick={() => handleDelete(p.id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700 transition"
-                    disabled={deleting === p.id}
-                  >
-                    {deleting === p.id ? "Deleting..." : "Delete"}
+        <div className="grid grid-cols-1 gap-6">
+          {products.map((product) => (
+            <div key={product.id} className="flex flex-col sm:flex-row gap-6 p-6 rounded-xl border border-secondary-100 items-start sm:items-center hover:bg-secondary-50 transition-colors">
+
+              {/* Image */}
+              <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 border border-secondary-200 bg-white">
+                {product.images && product.images.length > 0 ? (
+                  <Image
+                    src={getImageUrl(product.images[0])}
+                    alt={product.title}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-secondary-300 text-xs">No Img</div>
+                )}
+              </div>
+
+              {/* Info */}
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="font-bold text-lg text-secondary-900">{product.title}</h3>
+                  <span className="font-bold text-primary-600">€{product.price}</span>
+                </div>
+                <p className="text-secondary-600 text-sm mb-2 line-clamp-2">{product.description}</p>
+                <div className="flex items-center gap-4 text-xs text-secondary-500">
+                  <span>Seller: <span className="font-medium text-secondary-700">{product.user?.name || "Unknown"}</span></span>
+                  <span>Date: {new Date(product.createdAt).toLocaleDateString()}</span>
+                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 rounded-full font-medium">Pending Review</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex sm:flex-col gap-2 flex-shrink-0 w-full sm:w-auto mt-4 sm:mt-0">
+                <button
+                  onClick={() => handleApprove(product.id)}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm flex items-center justify-center gap-2 text-sm"
+                >
+                  <Check size={16} /> Approve
+                </button>
+
+                {/* View Details Link - Opens in new tab usually or modal */}
+                <Link href={`/user/products/${product.id}`} target="_blank">
+                  <button className="w-full px-4 py-2 bg-secondary-100 text-secondary-700 rounded-lg font-medium hover:bg-secondary-200 transition-colors flex items-center justify-center gap-2 text-sm">
+                    <Eye size={16} /> View
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </Link>
+
+                <button
+                  onClick={() => handleReject(product.id)}
+                  className="flex-1 px-4 py-2 border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  <X size={16} /> Reject
+                </button>
+              </div>
+
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

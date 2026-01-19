@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, Heart, User, LogOut, ShoppingBag, MessageCircle, Package, Wallet, MapPin } from "lucide-react";
+import { Menu, X, Heart, User, LogOut, ShoppingBag, MessageCircle, Package, Wallet, MapPin, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/context/WishlistContext";
 import { useRouter, usePathname } from "next/navigation";
+import NotificationCenter from "@/components/NotificationCenter";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -123,6 +124,9 @@ export default function Navbar() {
                   <MessageCircle size={22} />
                 </button>
 
+                {/* 🔔 Notifications */}
+                <NotificationCenter />
+
                 {/* ❤️ Wishlist Icon */}
                 <button
                   onClick={() => router.push("/user/wishlist")}
@@ -178,6 +182,9 @@ export default function Navbar() {
                       </Link>
                       <Link href="/user/addresses" className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors">
                         <MapPin size={16} /> My Addresses
+                      </Link>
+                      <Link href="/user/kyc" className="flex items-center gap-2 px-4 py-2 text-sm text-secondary-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors">
+                        <ShieldCheck size={16} /> Verify Identity
                       </Link>
 
                       <div className="h-px bg-secondary-100 my-2" />
@@ -284,6 +291,14 @@ export default function Navbar() {
                     >
                       <MapPin size={20} />
                       My Addresses
+                    </Link>
+                    <Link
+                      href="/user/kyc"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 text-secondary-700 font-medium"
+                    >
+                      <ShieldCheck size={20} />
+                      Verify Identity
                     </Link>
                     <Link
                       href="/user/chat"

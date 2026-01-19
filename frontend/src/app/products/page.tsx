@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "@/lib/axios";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar";
 import NewProductCard from "@/components/NewProductCard";
 import { motion } from "framer-motion";
@@ -11,11 +11,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { Plus } from "lucide-react";
 
 export default function ProductsPage() {
+    const searchParams = useSearchParams();
+    const initialCategory = searchParams.get("category") || "All";
+    const initialSearch = searchParams.get("search") || "";
+
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({
-        search: "",
-        category: "All",
+        search: initialSearch,
+        category: initialCategory,
         location: "",
         sort: "default",
     });
@@ -52,14 +56,27 @@ export default function ProductsPage() {
         }
     };
 
+    // Sync filters with URL params when they change (e.g. navigation)
+    useEffect(() => {
+        const category = searchParams.get("category") || "All";
+        const search = searchParams.get("search") || "";
+        console.log("URL Changed:", { category, search }); // Debug
+        setFilters(prev => ({
+            ...prev,
+            category,
+            search
+        }));
+        setPage(1);
+    }, [searchParams]);
+
     // Fetch when filters or page changes
     useEffect(() => {
         fetchProducts();
     }, [page, filters]);
 
-    // Reset page when filters change
+    // Reset page when filters change (triggered by SearchBar)
     const handleFilterChange = (newFilters: any) => {
-        setFilters(newFilters);
+        setFilters(prev => ({ ...prev, ...newFilters }));
         setPage(1);
     };
 
@@ -82,7 +99,7 @@ export default function ProductsPage() {
                     </div>
 
                     <div className="w-full md:w-auto">
-                        <SearchBar onFilterChange={handleFilterChange} />
+                        <SearchBar onFilterChange={handleFilterChange} filters={filters} />
                     </div>
                 </div>
 

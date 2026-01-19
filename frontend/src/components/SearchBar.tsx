@@ -1,18 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface SearchBarProps {
   onFilterChange: (filters: any) => void;
+  filters?: {
+    search: string;
+    category: string;
+    location: string;
+    sort: string;
+  };
 }
 
-export default function SearchBar({ onFilterChange }: SearchBarProps) {
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All");
-  const [location, setLocation] = useState("");
-  const [sort, setSort] = useState("default");
+export default function SearchBar({ onFilterChange, filters }: SearchBarProps) {
+  const [search, setSearch] = useState(filters?.search || "");
+  const [category, setCategory] = useState(filters?.category || "All");
+  const [location, setLocation] = useState(filters?.location || "");
+  const [sort, setSort] = useState(filters?.sort || "default");
+
+  // Sync with parent filters (e.g. URL changes)
+  useEffect(() => {
+    if (filters) {
+      setSearch(filters.search || "");
+      setCategory(filters.category || "All");
+      setLocation(filters.location || "");
+      setSort(filters.sort || "default");
+    }
+  }, [filters]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
@@ -79,15 +95,20 @@ export default function SearchBar({ onFilterChange }: SearchBarProps) {
           className="w-full pl-10 pr-4 py-3 rounded-xl border border-secondary-200 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all text-secondary-900 appearance-none bg-white cursor-pointer"
         >
           <option value="All">All Categories</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Shoes">Shoes</option>
           <option value="Electronics">Electronics</option>
-          <option value="Fashion">Fashion</option>
-          <option value="Home">Home</option>
-          <option value="Books">Books</option>
+          <option value="Home">Home & Garden</option>
+          <option value="Gaming">Gaming</option>
+          <option value="Accessories">Accessories</option>
           <option value="Sports">Sports</option>
-          <option value="Furniture">Furniture</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Kids">Kids</option>
+          <option value="Books">Books</option>
           <option value="Vehicles">Vehicles</option>
+          <option value="Hobbies">Hobbies</option>
           <option value="Other">Other</option>
-          
+
         </select>
       </div>
 

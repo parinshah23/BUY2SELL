@@ -38,9 +38,31 @@ model User {
   isVerified Boolean @default(false)
   kycStatus  KYCStatus @default(NOT_SUBMITTED)
   kycDocs    String[]
+  notifications Notification[]
   addresses  Address[]
 }
 
+model Notification {
+  id        Int      @id @default(autoincrement())
+  title     String
+  message   String
+  type      NotificationType
+  isRead    Boolean  @default(false)
+  link      String?  // Optional link to related resource (e.g. /orders/1)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+}
+
+enum NotificationType {
+  SYSTEM
+  ORDER
+  PAYMENT
+  ACCOUNT
+}
+
+// Existing Enums...
 model Address {
   id        Int      @id @default(autoincrement())
   name      String   // Recipient Name
@@ -69,6 +91,7 @@ model Product {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   status      ProductStatus @default(AVAILABLE)
+  moderationStatus ModerationStatus @default(PENDING)
 
   user   User @relation(fields: [userId], references: [id])
   userId Int
@@ -231,5 +254,11 @@ enum KYCStatus {
   NOT_SUBMITTED
   PENDING
   VERIFIED
+  REJECTED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
   REJECTED
 }

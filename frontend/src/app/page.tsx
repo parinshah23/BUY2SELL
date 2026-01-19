@@ -1,15 +1,26 @@
 "use client";
 
 import Hero from "@/components/Hero";
+import Categories from "@/components/Categories";
 import FeaturedProducts from "@/components/FeaturedProducts";
 
 export default function MarketplacePage() {
   return (
-    <div className="bg-secondary-50 min-h-screen">
+    <div className="bg-secondary-50 min-h-screen pb-20">
       <Hero />
 
-      <FeaturedProducts />
+      <Categories />
 
+      {/* Fresh Items Feed */}
+      <section className="py-12">
+        <div className="container-custom">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-bold text-secondary-900">Fresh Recommendations</h2>
+            <a href="/products" className="text-primary-600 font-semibold hover:underline">See all</a>
+          </div>
+          <FeaturedProducts />
+        </div>
+      </section>
       {/* Trust/Why Choose Us Section */}
       <section className="py-20 bg-gradient-to-br from-primary-50 to-secondary-100">
         <div className="container-custom text-center">
@@ -33,6 +44,7 @@ export default function MarketplacePage() {
           </div>
         </div>
       </section>
+
     </div>
   );
 }

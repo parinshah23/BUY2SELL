@@ -118,12 +118,12 @@ export default function NewProductCard({
               >
                 €{product.price}
               </CardItem>
-              {product.stock !== undefined && (
+              {product.stock !== undefined && product.stock <= 0 && (
                 <CardItem
                   translateZ="30"
-                  className={`text-xs font-bold ${product.stock > 0 ? "text-green-600" : "text-red-600"}`}
+                  className="text-xs font-bold text-red-600"
                 >
-                  {product.stock > 0 ? `${product.stock} in stock` : "Out of Stock"}
+                  Out of Stock
                 </CardItem>
               )}
             </div>

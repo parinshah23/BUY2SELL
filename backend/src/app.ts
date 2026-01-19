@@ -17,6 +17,8 @@ import statsRouter from "./routes/stats";
 import webhookRouter from "./routes/webhook";
 import walletRouter from "./routes/wallet";
 import addressRouter from "./routes/address";
+import kycRouter from "./routes/kyc";
+import notificationRouter from "./routes/notifications";
 
 dotenv.config();
 
@@ -45,5 +47,7 @@ app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/stats", statsRouter);
 app.use("/api/v1/wallet", walletRouter);
 app.use("/api/v1/address", addressRouter);
+app.use("/api/v1/kyc", kycRouter);
+app.use("/api/v1/notifications", notificationRouter);
 
 export default app;

@@ -5,6 +5,7 @@ import jwt, { Secret, SignOptions } from "jsonwebtoken";
 import dotenv from "dotenv";
 import { verifyToken } from "../middlewares/authMiddleware";
 import { OAuth2Client } from "google-auth-library";
+import { sendEmail } from "../lib/mail";
 
 dotenv.config();
 const router = Router();
@@ -30,6 +31,22 @@ router.post("/register", async (req, res) => {
       data: { name, email, password: hashedPassword },
       select: { id: true, name: true, email: true, createdAt: true },
     });
+
+    // Send Welcome Email
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Welcome to Buy2Sell! 🚀",
+        html: `
+          <h1>Welcome, ${name}!</h1>
+          <p>We're thrilled to have you on board. Start exploring unique digital assets or selling your own today.</p>
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" style="padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Login Now</a>
+        `,
+      });
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Proceed without failing the request
+    }
 
     res.status(201).json({ message: "User registered successfully", user });
   } catch (error) {
