@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Menu, X, Heart, User, LogOut, ShoppingBag, MessageCircle, Package, Wallet, MapPin, ShieldCheck } from "lucide-react";
+import { Menu, X, Heart, User, LogOut, ShoppingBag, MessageCircle, Package, Wallet, MapPin, ShieldCheck, Bell } from "lucide-react";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlist } from "@/context/WishlistContext";
@@ -299,6 +299,14 @@ export default function Navbar() {
                     >
                       <ShieldCheck size={20} />
                       Verify Identity
+                    </Link>
+                    <Link
+                      href="/user/notifications"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-3 text-secondary-700 font-medium"
+                    >
+                      <Bell size={20} />
+                      Notifications
                     </Link>
                     <Link
                       href="/user/chat"
