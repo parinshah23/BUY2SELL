@@ -132,15 +132,8 @@ export default function ProductDetailPage() {
       router.push("/user/login");
       return;
     }
-    try {
-      setBuying(true);
-      const res = await axios.post("/orders/checkout", { productId: product.id });
-      window.location.href = res.data.url;
-    } catch (error) {
-      console.error("Error creating checkout session:", error);
-      toast.error("Failed to initiate checkout");
-      setBuying(false);
-    }
+    // Redirect to Checkout Page
+    router.push(`/orders/checkout/${product.id}`);
   };
 
   if (loading) return <Loader />;
