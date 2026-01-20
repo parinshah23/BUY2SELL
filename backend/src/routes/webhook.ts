@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { OrderStatus, TransactionType, ProductStatus } from "@prisma/client";
+import { OrderStatus, TransactionType, ProductStatus, PaymentMethod } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import Stripe from "stripe";
 import express from "express";
@@ -28,15 +28,23 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
     // Handle Events
     if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
-        const { productId, buyerId, sellerId, amount } = session.metadata!;
+        // Metadata is always string values
+        const { productId, buyerId, sellerId, addressId, protectionFee, shippingCost, amount } = session.metadata!;
 
         console.log("✅ Payment Successful for Product:", productId);
 
         try {
-            // 1. Create Order
-            const orderAmount = parseFloat(amount);
-            const platformFee = orderAmount * 0.04;
-            const sellerEarnings = orderAmount - platformFee;
+            const orderAmount = parseFloat(amount); // This is TOTAL (Item + Fees)
+            const fee = parseFloat(protectionFee);
+            const shipping = parseFloat(shippingCost);
+
+            // Fetch Address for Snapshot
+            const address = await prisma.address.findUnique({ where: { id: parseInt(addressId) } });
+
+            // Seller Earnings = Total - Fees - Shipping = Product Price
+            // OR simpler: Seller Earnings = Product Price (which we can infer or fetch)
+            // Let's rely on the math: Earnings = Total - Protection - Shipping
+            const sellerEarnings = orderAmount - fee - shipping;
 
             await prisma.$transaction(async (tx) => {
                 // Create Order
@@ -46,16 +54,19 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
                         buyerId: parseInt(buyerId),
                         sellerId: parseInt(sellerId),
                         totalAmount: orderAmount,
-                        platformFee,
-                        sellerEarnings,
+                        platformFee: fee,
+                        sellerEarnings: sellerEarnings,
+                        shippingCost: shipping,
+                        protectionFee: fee,
+                        shippingAddress: address as any,
                         status: OrderStatus.PAID,
+                        paymentMethod: PaymentMethod.STRIPE,
                         stripeSessionId: session.id,
                         paymentIntentId: session.payment_intent as string,
                     },
                 });
 
                 // Update Product Stock
-                // Logic: Decrement stock. If it hits 0, mark as SOLD.
                 const product = await tx.product.findUnique({ where: { id: parseInt(productId) } });
 
                 if (product) {
@@ -109,7 +120,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
                 sendEmail({
                     to: seller.email,
                     subject: "New Sale! 💰 - Buy2Sell",
-                    html: `<h1>You made a sale!</h1><p>Product #${productId} was sold for $${amount}.</p><p>Earnings of $${(parseFloat(amount) * 0.96).toFixed(2)} have been added to your pending balance.</p>`
+                    html: `<h1>You made a sale!</h1><p>Product #${productId} was sold for $${sellerEarnings.toFixed(2)}.</p><p>Funds have been added to your pending balance.</p>`
                 }).catch(err => console.error("Failed to email seller:", err));
             }
 
@@ -126,7 +137,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
                     {
                         userId: parseInt(sellerId),
                         title: "New Sale! 💰",
-                        message: `You sold product #${productId} for $${amount}.`,
+                        message: `You sold product #${productId} for $${sellerEarnings.toFixed(2)}.`,
                         type: "ORDER",
                         link: "/user/wallet"
                     }

@@ -2,16 +2,122 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import Stripe from "stripe";
 import { verifyToken } from "../middlewares/authMiddleware";
+import { PaymentMethod, TransactionType, OrderStatus, ProductStatus } from "@prisma/client";
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
     apiVersion: "2024-12-18.acacia" as any,
 });
 
+// Helper to calculate fees
+const calculateFees = (price: number) => {
+    const protectionFee = price * 0.05 + 0.70; // 5% + $0.70
+    const shippingCost = 5.00; // Fixed for now
+    return { protectionFee, shippingCost, total: price + protectionFee + shippingCost };
+};
+
+// ✅ Preview Order (Fee Breakdown)
+router.post("/preview", verifyToken, async (req, res) => {
+    try {
+        const { productId } = req.body;
+        const product = await prisma.product.findUnique({ where: { id: productId } });
+
+        if (!product) return res.status(404).json({ message: "Product not found" });
+
+        const { protectionFee, shippingCost, total } = calculateFees(product.price);
+
+        res.json({
+            price: product.price,
+            protectionFee,
+            shippingCost,
+            total
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Failed to preview order" });
+    }
+});
+
+// ✅ Pay with Wallet
+router.post("/pay-with-wallet", verifyToken, async (req, res) => {
+    try {
+        const { productId, addressId } = req.body;
+        const buyerId = (req as any).user.id;
+
+        const product = await prisma.product.findUnique({ where: { id: productId } });
+        if (!product) return res.status(404).json({ message: "Product not found" });
+        if (product.status === "SOLD") return res.status(400).json({ message: "Product already sold" });
+        if (product.userId === buyerId) return res.status(400).json({ message: "Cannot buy your own product" });
+
+        const address = await prisma.address.findUnique({ where: { id: addressId } });
+        if (!address) return res.status(400).json({ message: "Invalid address" });
+
+        const { protectionFee, shippingCost, total } = calculateFees(product.price);
+
+        // Check Wallet Balance
+        const buyerWallet = await prisma.wallet.findUnique({ where: { userId: buyerId } });
+        if (!buyerWallet || buyerWallet.balance < total) {
+            return res.status(400).json({ message: "Insufficient wallet balance" });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            // Deduct from Buyer
+            await tx.wallet.update({
+                where: { userId: buyerId },
+                data: { balance: { decrement: total } }
+            });
+
+            await tx.walletTransaction.create({
+                data: {
+                    walletId: buyerWallet.id,
+                    amount: -total,
+                    type: TransactionType.SALE, // or PURCHASE
+                    description: `Purchase of ${product.title}`,
+                }
+            });
+
+            // Create Order
+            await tx.order.create({
+                data: {
+                    productId,
+                    buyerId,
+                    sellerId: product.userId,
+                    totalAmount: total,
+                    platformFee: protectionFee,
+                    sellerEarnings: product.price,
+                    shippingCost,
+                    protectionFee,
+                    shippingAddress: address as any,
+                    status: OrderStatus.PAID,
+                    paymentMethod: PaymentMethod.WALLET,
+                }
+            });
+
+            // Update Product
+            await tx.product.update({
+                where: { id: productId },
+                data: { status: ProductStatus.SOLD, stock: { decrement: 1 } }
+            });
+
+            // Credit Seller (Pending)
+            await tx.wallet.upsert({
+                where: { userId: product.userId },
+                update: { pending: { increment: product.price } },
+                create: { userId: product.userId, pending: product.price, balance: 0 }
+            });
+        });
+
+        res.json({ success: true, message: "Payment successful" });
+
+    } catch (error) {
+        console.error("Wallet payment error:", error);
+        res.status(500).json({ message: "Payment failed" });
+    }
+});
+
 // ✅ Create Checkout Session (Buy Now)
 router.post("/checkout", verifyToken, async (req, res) => {
     try {
-        const { productId } = req.body;
+        const { productId, addressId } = req.body;
         const buyerId = (req as any).user.id;
 
         const product = await prisma.product.findUnique({
@@ -23,9 +129,11 @@ router.post("/checkout", verifyToken, async (req, res) => {
         if (product.userId === buyerId) return res.status(400).json({ message: "Cannot buy your own product" });
         if (product.status === "SOLD") return res.status(400).json({ message: "Product already sold" });
 
-        // Calculate Fees (Platform Fee: 4%)
-        const platformFeePercent = 0.04;
-        const amount = product.price;
+        const address = await prisma.address.findUnique({ where: { id: addressId } });
+        if (!address) return res.status(400).json({ message: "Address is required" });
+
+        // Calculate Fees
+        const { protectionFee, shippingCost, total } = calculateFees(product.price);
 
         // Create Stripe Session
         const session = await stripe.checkout.sessions.create({
@@ -33,15 +141,31 @@ router.post("/checkout", verifyToken, async (req, res) => {
             line_items: [
                 {
                     price_data: {
-                        currency: "usd",
+                        currency: "eur",
                         product_data: {
                             name: product.title,
                             images: product.images.length > 0 ? [product.images[0]] : [],
                         },
-                        unit_amount: Math.round(amount * 100), // Convert to cents
+                        unit_amount: Math.round(product.price * 100), // Item Price
                     },
                     quantity: 1,
                 },
+                {
+                    price_data: {
+                        currency: "eur",
+                        product_data: { name: "Buyer Protection Fee" },
+                        unit_amount: Math.round(protectionFee * 100),
+                    },
+                    quantity: 1,
+                },
+                {
+                    price_data: {
+                        currency: "eur",
+                        product_data: { name: "Shipping Cost" },
+                        unit_amount: Math.round(shippingCost * 100),
+                    },
+                    quantity: 1,
+                }
             ],
             mode: "payment",
             success_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}/orders/success?session_id={CHECKOUT_SESSION_ID}`,
@@ -50,7 +174,10 @@ router.post("/checkout", verifyToken, async (req, res) => {
                 productId: product.id.toString(),
                 buyerId: buyerId.toString(),
                 sellerId: product.userId.toString(),
-                amount: amount.toString(),
+                addressId: addressId.toString(),
+                protectionFee: protectionFee.toString(),
+                shippingCost: shippingCost.toString(),
+                amount: total.toString(),
             },
             payment_intent_data: {
                 metadata: {

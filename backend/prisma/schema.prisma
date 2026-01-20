@@ -112,6 +112,11 @@ model Order {
   platformFee     Float // 4% fee
   sellerEarnings  Float // Amount to be transferred to seller
 
+  protectionFee   Float @default(0.0) // Buyer Protection Fee
+  shippingCost    Float @default(0.0) // Shipping Cost
+  shippingAddress Json? // Snapshot of shipping address at time of purchase
+  paymentMethod   PaymentMethod @default(STRIPE)
+
   stripeSessionId String? @unique
   paymentIntentId String?
 
@@ -255,6 +260,11 @@ enum KYCStatus {
   PENDING
   VERIFIED
   REJECTED
+}
+
+enum PaymentMethod {
+  STRIPE
+  WALLET
 }
 
 enum ModerationStatus {
