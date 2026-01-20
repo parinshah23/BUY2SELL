@@ -19,6 +19,7 @@ import walletRouter from "./routes/wallet";
 import kycRouter from "./routes/kyc";
 import notificationRouter from "./routes/notifications";
 import offerRouter from "./routes/offers";
+import addressRouter from "./routes/address";
 
 dotenv.config();
 
@@ -49,5 +50,6 @@ app.use("/api/v1/wallet", walletRouter);
 app.use("/api/v1/kyc", kycRouter);
 app.use("/api/v1/notifications", notificationRouter);
 app.use("/api/v1/offers", offerRouter);
+app.use("/api/v1/address", addressRouter);
 
 export default app;
