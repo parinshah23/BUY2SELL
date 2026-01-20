@@ -12,6 +12,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 
 // ✅ Webhook Handler (Must use raw body parser in app.ts or specific route)
 router.post("/", express.raw({ type: "application/json" }), async (req, res) => {
+    console.log("🔔 [DEBUG] Webhook endpoint hit!");
     const sig = req.headers["stripe-signature"];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -29,7 +30,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
     if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
         // Metadata is always string values
-        const { productId, buyerId, sellerId, addressId, protectionFee, shippingCost, amount } = session.metadata!;
+        const { productId, buyerId, sellerId, addressId, protectionFee, shippingCost, amount, shippingProvider } = session.metadata!;
 
         console.log("✅ Payment Successful for Product:", productId);
 
@@ -59,6 +60,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
                         shippingCost: shipping,
                         protectionFee: fee,
                         shippingAddress: address as any,
+                        shippingProvider: shippingProvider || "Standard", // Save provider
                         status: OrderStatus.PAID,
                         paymentMethod: PaymentMethod.STRIPE,
                         stripeSessionId: session.id,

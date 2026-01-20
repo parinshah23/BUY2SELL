@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "@/lib/axios";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, User, MessageCircle, ArrowLeft, Image as ImageIcon, MoreVertical, Ban, AlertTriangle, X } from "lucide-react";
+import { Send, User, MessageCircle, ArrowLeft, Image as ImageIcon, MoreVertical, Ban, AlertTriangle, X, Check } from "lucide-react";
 import { io } from "socket.io-client";
 import { toast } from "sonner";
 
@@ -123,6 +123,72 @@ export default function ChatPage() {
     const isFirstLoad = useRef(true);
     useEffect(() => { isFirstLoad.current = true; }, [currentChatId]);
 
+    const [offers, setOffers] = useState<any[]>([]);
+
+    useEffect(() => {
+        if (!currentChatId || !chats.length) return;
+
+        const activeChat = chats.find(c => c.id === Number(currentChatId));
+        if (!activeChat) return;
+
+        const fetchOffers = async () => {
+            try {
+                // Fetch offers for this product. 
+                // NOTE: The endpoint is /offers/product/:id, but it returns ALL offers for the product.
+                // We need to filter for the buyer in this chat.
+                const res = await axios.get(`/offers/product/${activeChat.productId}`);
+
+                // Filter offers relevant to this chat (match buyerId)
+                const chatBuyerId = activeChat.buyerId;
+                const relevantOffers = res.data.offers.filter((o: any) => o.buyerId === chatBuyerId);
+
+                setOffers(relevantOffers);
+            } catch (error) {
+                console.error("Error fetching offers:", error);
+                // If it fails (e.g. 403 because I'm the buyer), we might need a different endpoint 
+                // or just ignore. For now, we assume this works primarily for Sellers or we need to update the backend 
+                // to allow buyers to see their own offers.
+                // Actually, the backend `GET /product/:id` checks `if (product.userId !== userId)`.
+                // So this only works for the Seller.
+                // Buyers won't see this unless we update the backend.
+                // For now, let's just catch and ignore for buyers preventing crash.
+            }
+        };
+
+        if (user?.id === activeChat.sellerId) {
+            fetchOffers();
+        } else {
+            // If I am the buyer, I should probably see my own offers?
+            // The current backend doesn't support "Get my offers". 
+            // We can skip for now or rely on the fact that if I am the buyer, I know I made an offer.
+            // But to show status, we need to fetch it.
+            // Let's leave it for Seller view primarily as per plan.
+        }
+
+    }, [currentChatId, chats, user?.id]);
+
+    const handleAcceptOffer = async (offerId: number) => {
+        try {
+            await axios.put(`/offers/${offerId}/accept`);
+            toast.success("Offer accepted!");
+            // Refresh offers
+            setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: "ACCEPTED" } : o));
+        } catch (error) {
+            toast.error("Failed to accept offer");
+        }
+    };
+
+    const handleRejectOffer = async (offerId: number) => {
+        try {
+            await axios.put(`/offers/${offerId}/reject`);
+            toast.success("Offer rejected");
+            setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: "REJECTED" } : o));
+        } catch (error) {
+            toast.error("Failed to reject offer");
+        }
+    };
+
+    // ... (rest of useEffect)
     useEffect(() => {
         if (messages.length === 0 || !containerRef.current) return;
         const container = containerRef.current;
@@ -368,33 +434,82 @@ export default function ChatPage() {
                                     </div>
 
                                     {/* Action Menu */}
-                                    <div className="relative">
-                                        <button onClick={() => setShowMenu(!showMenu)} className="p-2 text-secondary-500 hover:bg-secondary-50 rounded-full transition-colors">
-                                            <MoreVertical size={20} />
-                                        </button>
-                                        <AnimatePresence>
-                                            {showMenu && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, scale: 0.95 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    exit={{ opacity: 0, scale: 0.95 }}
-                                                    className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-xl border border-secondary-100 p-1 z-50 origin-top-right"
-                                                >
-                                                    <button
-                                                        onClick={() => handleReportUser(activeChatOtherUser.id)}
-                                                        className="w-full text-left px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 rounded-lg flex items-center gap-2"
+                                    <div className="flex items-center gap-2">
+                                        {/* 🏷️ Offers Section */}
+                                        {offers.length > 0 && (
+                                            <div className="mr-2 hidden md:block">
+                                                {offers[0].status === "PENDING" ? (
+                                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-1.5 flex items-center gap-3">
+                                                        <span className="text-sm font-semibold text-yellow-800">
+                                                            Offer: €{offers[0].amount}
+                                                        </span>
+                                                        {user?.id === activeChat?.sellerId && (
+                                                            <div className="flex gap-1">
+                                                                <button
+                                                                    onClick={() => handleAcceptOffer(offers[0].id)}
+                                                                    className="p-1 bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+                                                                    title="Accept Offer"
+                                                                >
+                                                                    <Check size={14} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleRejectOffer(offers[0].id)}
+                                                                    className="p-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                                                                    title="Reject Offer"
+                                                                >
+                                                                    <X size={14} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                        {user?.id === activeChat?.buyerId && (
+                                                            <span className="text-xs text-yellow-600 italic">Pending...</span>
+                                                        )}
+                                                    </div>
+                                                ) : offers[0].status === "ACCEPTED" ? (
+                                                    <div className="bg-green-50 border border-green-200 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                                                        <span className="text-sm font-semibold text-green-800">
+                                                            Offer Accepted: €{offers[0].amount}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                                                        <span className="text-sm font-medium text-gray-500 line-through">
+                                                            Offer: €{offers[0].amount}
+                                                        </span>
+                                                        <span className="text-xs text-red-500 ml-2 font-bold uppercase">Rejected</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className="relative">
+                                            <button onClick={() => setShowMenu(!showMenu)} className="p-2 text-secondary-500 hover:bg-secondary-50 rounded-full transition-colors">
+                                                <MoreVertical size={20} />
+                                            </button>
+                                            <AnimatePresence>
+                                                {showMenu && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, scale: 0.95 }}
+                                                        animate={{ opacity: 1, scale: 1 }}
+                                                        exit={{ opacity: 0, scale: 0.95 }}
+                                                        className="absolute right-0 top-12 w-48 bg-white rounded-xl shadow-xl border border-secondary-100 p-1 z-50 origin-top-right"
                                                     >
-                                                        <AlertTriangle size={16} /> Report User
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleBlockUser(activeChatOtherUser.id)}
-                                                        className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2"
-                                                    >
-                                                        <Ban size={16} /> Block User
-                                                    </button>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
+                                                        <button
+                                                            onClick={() => handleReportUser(activeChatOtherUser.id)}
+                                                            className="w-full text-left px-4 py-2 text-sm text-secondary-700 hover:bg-secondary-50 rounded-lg flex items-center gap-2"
+                                                        >
+                                                            <AlertTriangle size={16} /> Report User
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleBlockUser(activeChatOtherUser.id)}
+                                                            className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2"
+                                                        >
+                                                            <Ban size={16} /> Block User
+                                                        </button>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
                                     </div>
                                 </div>
 

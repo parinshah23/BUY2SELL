@@ -1,8 +1,8 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import Stripe from "stripe";
 import { verifyToken } from "../middlewares/authMiddleware";
-import { PaymentMethod, TransactionType, OrderStatus, ProductStatus } from "@prisma/client";
+import { PaymentMethod, TransactionType, OrderStatus, ProductStatus, OfferStatus } from "@prisma/client";
 
 const router = Router();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
@@ -16,42 +16,81 @@ const calculateFees = (price: number) => {
     return { protectionFee, shippingCost, total: price + protectionFee + shippingCost };
 };
 
+// ... (imports remain the same)
+
+// ✅ Helper: Get Effective Price (Check for Accepted Offers)
+const getEffectivePrice = async (productId: number, buyerId: number, originalPrice: number) => {
+    const offer = await prisma.offer.findFirst({
+        where: {
+            productId,
+            buyerId,
+            status: OfferStatus.ACCEPTED
+        },
+        orderBy: { createdAt: "desc" }
+    });
+    return offer ? offer.amount : originalPrice;
+};
+
 // ✅ Preview Order (Fee Breakdown)
-router.post("/preview", verifyToken, async (req, res) => {
+router.post("/preview", verifyToken, async (req: Request, res: Response) => {
     try {
-        const { productId } = req.body;
-        const product = await prisma.product.findUnique({ where: { id: productId } });
+        const { productId, shippingProvider } = req.body; // Accept provider
+        const buyerId = (req as any).user.id;
+        const product = await prisma.product.findUnique({ where: { id: parseInt(productId) } });
 
         if (!product) return res.status(404).json({ message: "Product not found" });
 
-        const { protectionFee, shippingCost, total } = calculateFees(product.price);
+        const price = await getEffectivePrice(product.id, buyerId, product.price);
+
+        // Calculate fees dynamically based on shipping provider if needed
+        // For now, simple logic:
+        let shippingCost = 5.00;
+        if (shippingProvider === "Mondial Relay") shippingCost = 3.99;
+        if (shippingProvider === "Home Delivery") shippingCost = 6.99;
+        if (shippingProvider === "UPS Access Point") shippingCost = 4.50;
+
+        const protectionFee = price * 0.05 + 0.70;
+        const total = price + protectionFee + shippingCost;
 
         res.json({
-            price: product.price,
+            price, // Return effective price
+            originalPrice: product.price, // Return original for comparison
+            isOffer: price < product.price,
             protectionFee,
             shippingCost,
-            total
+            total,
+            shippingProvider // Echo back
         });
     } catch (error) {
+        console.error("Error previewing order:", error);
         res.status(500).json({ message: "Failed to preview order" });
     }
 });
 
 // ✅ Pay with Wallet
-router.post("/pay-with-wallet", verifyToken, async (req, res) => {
+router.post("/pay-with-wallet", verifyToken, async (req: Request, res: Response) => {
     try {
-        const { productId, addressId } = req.body;
+        const { productId, addressId, shippingProvider } = req.body;
         const buyerId = (req as any).user.id;
 
-        const product = await prisma.product.findUnique({ where: { id: productId } });
+        const product = await prisma.product.findUnique({ where: { id: parseInt(productId) } });
         if (!product) return res.status(404).json({ message: "Product not found" });
         if (product.status === "SOLD") return res.status(400).json({ message: "Product already sold" });
         if (product.userId === buyerId) return res.status(400).json({ message: "Cannot buy your own product" });
 
-        const address = await prisma.address.findUnique({ where: { id: addressId } });
+        const address = await prisma.address.findUnique({ where: { id: parseInt(addressId) } });
         if (!address) return res.status(400).json({ message: "Invalid address" });
 
-        const { protectionFee, shippingCost, total } = calculateFees(product.price);
+        const price = await getEffectivePrice(product.id, buyerId, product.price);
+
+        // Recalculate based on provider
+        let shippingCost = 5.00;
+        if (shippingProvider === "Mondial Relay") shippingCost = 3.99;
+        if (shippingProvider === "Home Delivery") shippingCost = 6.99;
+        if (shippingProvider === "UPS Access Point") shippingCost = 4.50;
+
+        const protectionFee = price * 0.05 + 0.70;
+        const total = price + protectionFee + shippingCost;
 
         // Check Wallet Balance
         const buyerWallet = await prisma.wallet.findUnique({ where: { userId: buyerId } });
@@ -78,15 +117,16 @@ router.post("/pay-with-wallet", verifyToken, async (req, res) => {
             // Create Order
             await tx.order.create({
                 data: {
-                    productId,
+                    productId: parseInt(productId),
                     buyerId,
                     sellerId: product.userId,
                     totalAmount: total,
                     platformFee: protectionFee,
-                    sellerEarnings: product.price,
+                    sellerEarnings: price, // Seller gets the offer price
                     shippingCost,
                     protectionFee,
                     shippingAddress: address as any,
+                    shippingProvider, // Save provider
                     status: OrderStatus.PAID,
                     paymentMethod: PaymentMethod.WALLET,
                 }
@@ -94,15 +134,15 @@ router.post("/pay-with-wallet", verifyToken, async (req, res) => {
 
             // Update Product
             await tx.product.update({
-                where: { id: productId },
+                where: { id: parseInt(productId) },
                 data: { status: ProductStatus.SOLD, stock: { decrement: 1 } }
             });
 
             // Credit Seller (Pending)
             await tx.wallet.upsert({
                 where: { userId: product.userId },
-                update: { pending: { increment: product.price } },
-                create: { userId: product.userId, pending: product.price, balance: 0 }
+                update: { pending: { increment: price } },
+                create: { userId: product.userId, pending: price, balance: 0 }
             });
         });
 
@@ -115,13 +155,13 @@ router.post("/pay-with-wallet", verifyToken, async (req, res) => {
 });
 
 // ✅ Create Checkout Session (Buy Now)
-router.post("/checkout", verifyToken, async (req, res) => {
+router.post("/checkout", verifyToken, async (req: Request, res: Response) => {
     try {
-        const { productId, addressId } = req.body;
+        const { productId, addressId, shippingProvider } = req.body;
         const buyerId = (req as any).user.id;
 
         const product = await prisma.product.findUnique({
-            where: { id: productId },
+            where: { id: parseInt(productId) },
             include: { user: true },
         });
 
@@ -129,11 +169,19 @@ router.post("/checkout", verifyToken, async (req, res) => {
         if (product.userId === buyerId) return res.status(400).json({ message: "Cannot buy your own product" });
         if (product.status === "SOLD") return res.status(400).json({ message: "Product already sold" });
 
-        const address = await prisma.address.findUnique({ where: { id: addressId } });
+        const address = await prisma.address.findUnique({ where: { id: parseInt(addressId) } });
         if (!address) return res.status(400).json({ message: "Address is required" });
 
-        // Calculate Fees
-        const { protectionFee, shippingCost, total } = calculateFees(product.price);
+        // Calculate Fees with Effective Price
+        const price = await getEffectivePrice(product.id, buyerId, product.price);
+
+        let shippingCost = 5.00;
+        if (shippingProvider === "Mondial Relay") shippingCost = 3.99;
+        if (shippingProvider === "Home Delivery") shippingCost = 6.99;
+        if (shippingProvider === "UPS Access Point") shippingCost = 4.50;
+
+        const protectionFee = price * 0.05 + 0.70;
+        const total = price + protectionFee + shippingCost;
 
         // Create Stripe Session
         const session = await stripe.checkout.sessions.create({
@@ -146,7 +194,7 @@ router.post("/checkout", verifyToken, async (req, res) => {
                             name: product.title,
                             images: product.images.length > 0 ? [product.images[0]] : [],
                         },
-                        unit_amount: Math.round(product.price * 100), // Item Price
+                        unit_amount: Math.round(price * 100), // Effective Price
                     },
                     quantity: 1,
                 },
@@ -161,7 +209,7 @@ router.post("/checkout", verifyToken, async (req, res) => {
                 {
                     price_data: {
                         currency: "eur",
-                        product_data: { name: "Shipping Cost" },
+                        product_data: { name: `Shipping Cost (${shippingProvider})` },
                         unit_amount: Math.round(shippingCost * 100),
                     },
                     quantity: 1,
@@ -178,12 +226,14 @@ router.post("/checkout", verifyToken, async (req, res) => {
                 protectionFee: protectionFee.toString(),
                 shippingCost: shippingCost.toString(),
                 amount: total.toString(),
+                shippingProvider // Add provider to metadata
             },
             payment_intent_data: {
                 metadata: {
                     productId: product.id.toString(),
                     buyerId: buyerId.toString(),
                     sellerId: product.userId.toString(),
+                    shippingProvider // Add to PI metadata too
                 }
             }
         });
@@ -196,9 +246,10 @@ router.post("/checkout", verifyToken, async (req, res) => {
 });
 
 // ✅ Get My Orders (As Buyer)
-router.get("/my-orders", verifyToken, async (req, res) => {
+router.get("/my-orders", verifyToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.id;
+        const userId = parseInt((req as any).user.id);
+        console.log(`[DEBUG] Fetching orders for Buyer ID: ${userId}`);
         const orders = await prisma.order.findMany({
             where: { buyerId: userId },
             include: {
@@ -207,16 +258,19 @@ router.get("/my-orders", verifyToken, async (req, res) => {
             },
             orderBy: { createdAt: "desc" },
         });
+        console.log(`[DEBUG] Found ${orders.length} orders for User ${userId}`);
         res.json({ orders });
     } catch (error) {
+        console.error("Error fetching orders:", error);
         res.status(500).json({ message: "Failed to fetch orders" });
     }
 });
 
 // ✅ Get My Sales (As Seller)
-router.get("/my-sales", verifyToken, async (req, res) => {
+router.get("/my-sales", verifyToken, async (req: Request, res: Response) => {
     try {
-        const userId = (req as any).user.id;
+        const userId = parseInt((req as any).user.id);
+        console.log(`[DEBUG] Fetching sales for Seller ID: ${userId}`);
         const sales = await prisma.order.findMany({
             where: { sellerId: userId },
             include: {
@@ -225,14 +279,16 @@ router.get("/my-sales", verifyToken, async (req, res) => {
             },
             orderBy: { createdAt: "desc" },
         });
+        console.log(`[DEBUG] Found ${sales.length} sales for User ${userId}`);
         res.json({ sales });
     } catch (error) {
+        console.error("Error fetching sales:", error);
         res.status(500).json({ message: "Failed to fetch sales" });
     }
 });
 
 // ✅ Update Order Status (Ship, Deliver, Confirm)
-router.put("/:id/status", verifyToken, async (req, res) => {
+router.put("/:id/status", verifyToken, async (req: Request, res: Response) => {
     try {
         const orderId = parseInt(req.params.id);
         const { status } = req.body; // Expect: SHIPPED, DELIVERED, COMPLETED

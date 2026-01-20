@@ -134,4 +134,38 @@ router.get("/blocked", verifyToken, async (req, res) => {
     }
 });
 
+// ✅ GET / UPDATE Bundle Settings
+router.get("/bundle-settings", verifyToken, async (req, res) => {
+    try {
+        const userId = (req as any).user.id;
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { bundleSettings: true }
+        });
+        res.json({ bundleSettings: user?.bundleSettings || null });
+    } catch (error) {
+        console.error("Error fetching bundle settings:", error);
+        res.status(500).json({ message: "Failed to fetch settings" });
+    }
+});
+
+router.put("/bundle-settings", verifyToken, async (req, res) => {
+    try {
+        const userId = (req as any).user.id;
+        const { bundleSettings } = req.body; // Expect JSON object
+
+        // Validate structure if needed (e.g. key=quantity(int), value=discount(int))
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: { bundleSettings }
+        });
+
+        res.json({ success: true, message: "Bundle discounts updated" });
+    } catch (error) {
+        console.error("Error updating bundle settings:", error);
+        res.status(500).json({ message: "Failed to update settings" });
+    }
+});
+
 export default router;

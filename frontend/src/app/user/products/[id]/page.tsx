@@ -11,6 +11,8 @@ import { motion } from "framer-motion";
 import { useWishlist } from "@/context/WishlistContext";
 import { getImageUrl } from "@/lib/utils";
 import { toast } from "sonner";
+import OfferModal from "@/components/OfferModal";
+import { Gavel } from "lucide-react";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -125,6 +127,7 @@ export default function ProductDetailPage() {
   };
 
   const [buying, setBuying] = useState(false);
+  const [isOfferModalOpen, setIsOfferModalOpen] = useState(false);
 
   // ✅ Handle Buy Now
   const handleBuyNow = async () => {
@@ -286,6 +289,14 @@ export default function ProductDetailPage() {
                       Buy Now
                     </button>
                   )}
+
+                  <button
+                    onClick={() => setIsOfferModalOpen(true)}
+                    className="flex-1 bg-white text-secondary-900 border border-secondary-200 px-8 py-4 rounded-xl font-semibold hover:bg-secondary-50 transition-all flex items-center justify-center gap-2 transform active:scale-95"
+                  >
+                    <Gavel size={20} />
+                    Make Offer
+                  </button>
                   <button
                     onClick={handleChat}
                     className="flex-1 bg-primary-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-primary-700 transition-all shadow-lg shadow-primary-500/30 flex items-center justify-center gap-2 transform active:scale-95"
@@ -305,6 +316,15 @@ export default function ProductDetailPage() {
                 </>
               )}
             </div>
+
+            <OfferModal
+              isOpen={isOfferModalOpen}
+              onClose={() => setIsOfferModalOpen(false)}
+              productId={product.id}
+              productPrice={product.price}
+              productTitle={product.title}
+              productImage={product.images?.[0] || product.image}
+            />
 
             {/* Trust Badges */}
             <div className="grid grid-cols-3 gap-4 mb-10">
