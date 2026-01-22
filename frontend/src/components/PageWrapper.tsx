@@ -7,7 +7,7 @@ export default function PageWrapper({ children }: { children: React.ReactNode })
     const isHomePage = pathname === "/";
 
     return (
-        <main className={`flex-grow ${isHomePage ? "" : "pt-24"}`}>
+        <main className={`flex-grow ${isHomePage ? "" : "pt-36"}`}>
             {children}
         </main>
     );

@@ -41,12 +41,23 @@ export default function Categories() {
                         <Link
                             key={category.name}
                             href={category.href}
-                            className="flex flex-col items-center gap-3 group"
+                            className="flex flex-col items-center gap-3 group relative"
                         >
-                            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-secondary-50 border border-secondary-100 flex items-center justify-center text-secondary-500 group-hover:bg-primary-50 group-hover:border-primary-200 group-hover:text-primary-600 transition-all duration-300 shadow-sm group-hover:shadow-md transform group-hover:-translate-y-1">
+                            {/* Special Badge for Key Categories */}
+                            {(category.name === "Clothing" || category.name === "Shoes") && (
+                                <span className="absolute -top-2 right-2 bg-primary-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 animate-pulse shadow-md">
+                                    HOT
+                                </span>
+                            )}
+
+                            <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm transform group-hover:-translate-y-1 
+                                ${category.name === "Clothing" || category.name === "Shoes"
+                                    ? "bg-primary-100 border-2 border-primary-500 text-primary-700 shadow-primary-200/50 shadow-lg scale-110"
+                                    : "bg-secondary-50 border border-secondary-100 text-secondary-500 group-hover:bg-primary-50 group-hover:border-primary-200 group-hover:text-primary-600 group-hover:shadow-md"
+                                }`}>
                                 <category.icon size={28} className="sm:w-8 sm:h-8" />
                             </div>
-                            <span className="text-sm font-medium text-secondary-700 group-hover:text-primary-700 text-center">
+                            <span className={`text-sm font-medium text-center ${category.name === "Clothing" || category.name === "Shoes" ? "text-primary-800 font-bold" : "text-secondary-700 group-hover:text-primary-700"}`}>
                                 {category.name}
                             </span>
                         </Link>

@@ -42,10 +42,19 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
             // Fetch Address for Snapshot
             const address = await prisma.address.findUnique({ where: { id: parseInt(addressId) } });
 
-            // Seller Earnings = Total - Fees - Shipping = Product Price
-            // OR simpler: Seller Earnings = Product Price (which we can infer or fetch)
-            // Let's rely on the math: Earnings = Total - Protection - Shipping
-            const sellerEarnings = orderAmount - fee - shipping;
+            // Fetch Product to get seller info for commission calculation
+            const product = await prisma.product.findUnique({ where: { id: parseInt(productId) } });
+            if (!product) throw new Error("Product not found for commission calculation");
+
+            // ✅ Dynamic Commission: 0% for first 5 sales, 7% from 6th onwards
+            const sellerSalesCount = await prisma.order.count({
+                where: { sellerId: parseInt(sellerId), status: { in: ["PAID", "SHIPPED", "DELIVERED", "COMPLETED"] } }
+            });
+            const commissionRate = sellerSalesCount < 5 ? 0 : 0.07;
+            // Calculate price from total (Total - Protection - Shipping = Effective Price)
+            const price = orderAmount - fee - shipping;
+            const commission = price * commissionRate;
+            const sellerEarnings = price - commission;
 
             await prisma.$transaction(async (tx) => {
                 // Create Order
@@ -55,7 +64,7 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
                         buyerId: parseInt(buyerId),
                         sellerId: parseInt(sellerId),
                         totalAmount: orderAmount,
-                        platformFee: fee,
+                        platformFee: fee + commission, // Combined platform revenue
                         sellerEarnings: sellerEarnings,
                         shippingCost: shipping,
                         protectionFee: fee,
@@ -69,10 +78,10 @@ router.post("/", express.raw({ type: "application/json" }), async (req, res) => 
                 });
 
                 // Update Product Stock
-                const product = await tx.product.findUnique({ where: { id: parseInt(productId) } });
+                const productData = await tx.product.findUnique({ where: { id: parseInt(productId) } });
 
-                if (product) {
-                    const newStock = Math.max(0, product.stock - 1);
+                if (productData) {
+                    const newStock = Math.max(0, productData.stock - 1);
                     const newStatus = newStock === 0 ? ProductStatus.SOLD : ProductStatus.AVAILABLE;
 
                     await tx.product.update({

@@ -92,6 +92,14 @@ router.post("/pay-with-wallet", verifyToken, async (req: Request, res: Response)
         const protectionFee = price * 0.05 + 0.70;
         const total = price + protectionFee + shippingCost;
 
+        // ✅ Dynamic Commission: 0% for first 5 sales, 7% from 6th onwards
+        const sellerSalesCount = await prisma.order.count({
+            where: { sellerId: product.userId, status: { in: ["PAID", "SHIPPED", "DELIVERED", "COMPLETED"] } }
+        });
+        const commissionRate = sellerSalesCount < 5 ? 0 : 0.07;
+        const commission = price * commissionRate;
+        const sellerEarnings = price - commission;
+
         // Check Wallet Balance
         const buyerWallet = await prisma.wallet.findUnique({ where: { userId: buyerId } });
         if (!buyerWallet || buyerWallet.balance < total) {
@@ -121,8 +129,8 @@ router.post("/pay-with-wallet", verifyToken, async (req: Request, res: Response)
                     buyerId,
                     sellerId: product.userId,
                     totalAmount: total,
-                    platformFee: protectionFee,
-                    sellerEarnings: price, // Seller gets the offer price
+                    platformFee: protectionFee + commission, // Combined platform revenue
+                    sellerEarnings: sellerEarnings, // Seller gets price - commission
                     shippingCost,
                     protectionFee,
                     shippingAddress: address as any,
@@ -141,8 +149,8 @@ router.post("/pay-with-wallet", verifyToken, async (req: Request, res: Response)
             // Credit Seller (Pending)
             await tx.wallet.upsert({
                 where: { userId: product.userId },
-                update: { pending: { increment: price } },
-                create: { userId: product.userId, pending: price, balance: 0 }
+                update: { pending: { increment: sellerEarnings } },
+                create: { userId: product.userId, pending: sellerEarnings, balance: 0 }
             });
         });
 

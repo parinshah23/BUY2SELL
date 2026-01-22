@@ -8,7 +8,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { useAuthContext } from "@/context/AuthContext";
+
 export default function NotificationCenter() {
+    const { user } = useAuthContext();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -16,6 +19,7 @@ export default function NotificationCenter() {
     const router = useRouter();
 
     const fetchNotifications = async () => {
+        if (!user) return; // Prevent fetch if not logged in
         try {
             const res = await axios.get("/notifications");
             setNotifications(res.data.notifications);
@@ -28,11 +32,13 @@ export default function NotificationCenter() {
     };
 
     useEffect(() => {
-        fetchNotifications();
-        // Poll every 30 seconds
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
-    }, []);
+        if (user) {
+            fetchNotifications();
+            // Poll every 30 seconds
+            const interval = setInterval(fetchNotifications, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     const handleMarkAsRead = async (id: number, link?: string) => {
         try {
