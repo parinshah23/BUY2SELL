@@ -48,7 +48,7 @@ export default function Navbar() {
         className="pointer-events-auto transition-shadow duration-300 flex flex-col overflow-visible"
       > 
     */}
-      <div className="container-custom flex justify-between items-center w-full py-2 px-6 md:px-8">
+      <div className="container-custom relative flex justify-between items-center w-full py-2 px-6 md:px-8">
         {/* 🌐 Logo */}
         <Link
           href="/"
@@ -57,12 +57,12 @@ export default function Navbar() {
           <img
             src="/logo(1).png"
             alt="Buy2Sell Logo"
-            className="h-26 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
+            className="h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-105"
           />
         </Link>
 
         {/* 🧭 Desktop Nav */}
-        <nav className="hidden md:flex items-center space-x-8">
+        <nav className="hidden md:flex absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 items-center space-x-8">
           {navLinks.map((link) => (
             <Link
               key={link.name}

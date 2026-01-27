@@ -6,18 +6,33 @@ import { Search } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-import { AuroraBackground } from "@/components/ui/aurora-background";
+import { ImagesSlider } from "@/components/ui/images-slider";
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
+
+// Assets
+import img2 from "@/assets/christopher-gower-_aXa21cf7rY-unsplash.jpg";
+import img3 from "@/assets/foad-roshan-WlSdc3JumNU-unsplash.jpg";
+import img4 from "@/assets/jackson-kondili-x5VhI538fII-unsplash.jpg";
+import img5 from "@/assets/lorenzo-herrera-p0j-mE6mGo4-unsplash.jpg";
+import img6 from "@/assets/tom-hermans-9BoqXzEeQqM-unsplash.jpg";
 
 export default function Hero() {
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
 
+  const heroImages = [
+    img2.src,
+    img3.src,
+    img4.src,
+    img5.src,
+    img6.src,
+  ];
+
   const words = [
-    { text: "Discover" },
-    { text: "Fashion," },
+    { text: "Discover", className: "text-white" },
+    { text: "Fashion,", className: "text-white" },
     { text: "Tech", className: "text-blue-400" },
-    { text: "&", className: "text-slate-900" },
+    { text: "&", className: "text-white" },
     { text: "More", className: "text-orange-500" },
   ];
 
@@ -29,23 +44,23 @@ export default function Hero() {
   };
 
   return (
-    <div className="relative w-full">
-      <AuroraBackground className="h-[550px] md:h-[620px] pt-44">
-        <div className="relative z-10 container-custom h-full flex flex-col items-center justify-center text-center px-4">
+    <div className="relative w-full h-[700px] md:h-[800px] bg-slate-900">
+      <ImagesSlider className="h-full" images={heroImages}>
+        <div className="relative z-50 container-custom h-full flex flex-col items-center justify-center text-center px-4 pt-40">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="max-w-4xl mx-auto"
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/40 border border-slate-200 text-slate-900 text-sm font-medium mb-6 animate-fade-in-up backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-white text-sm font-medium mb-6 animate-fade-in-up backdrop-blur-sm">
               <span className="text-base">🚀</span> The Ultimate Marketplace to Buy & Sell
             </div>
 
             <div className="mb-6 flex justify-center">
-              <TypewriterEffect words={words} className="text-4xl md:text-6xl font-extrabold tracking-tight drop-shadow-sm leading-tight text-slate-900" cursorClassName="bg-primary-500" />
+              <TypewriterEffect words={words} className="text-4xl md:text-6xl font-extrabold tracking-tight drop-shadow-sm leading-tight text-white" cursorClassName="bg-primary-500" />
             </div>
-            <p className="text-xl md:text-2xl text-slate-600 mb-10 font-medium max-w-2xl mx-auto">
+            <p className="text-xl md:text-2xl text-slate-200 mb-10 font-medium max-w-2xl mx-auto">
               Find the best deals on fashion, electronics, home goods, and more.
             </p>
 
@@ -69,23 +84,23 @@ export default function Hero() {
               </button>
             </form>
 
-            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-12 text-sm font-bold text-slate-700 drop-shadow-sm">
-              <div className="flex items-center gap-2 bg-white/40 px-3 py-1 rounded-full backdrop-blur-sm border border-slate-200">
-                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
+            <div className="flex flex-wrap items-center justify-center gap-6 md:gap-12 text-sm font-bold text-white drop-shadow-md">
+              <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
+                <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
                 Verified Sellers
               </div>
-              <div className="flex items-center gap-2 bg-white/40 px-3 py-1 rounded-full backdrop-blur-sm border border-slate-200">
-                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
+              <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
+                <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
                 Secure Payments
               </div>
-              <div className="flex items-center gap-2 bg-white/40 px-3 py-1 rounded-full backdrop-blur-sm border border-slate-200">
-                <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
+              <div className="flex items-center gap-2 bg-black/20 px-3 py-1 rounded-full backdrop-blur-sm border border-white/10">
+                <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]" />
                 Instant Delivery
               </div>
             </div>
           </motion.div>
         </div>
-      </AuroraBackground>
+      </ImagesSlider>
     </div>
   );
 }
